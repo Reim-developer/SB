@@ -1,6 +1,7 @@
 from json import load 
 from discord import Intents
 from discord.ext import commands
+from sql.sql_manager import SQLiteManager
 
 with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -13,10 +14,13 @@ bot_intents.presences = False
 async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
+		"cogs.events.cooldown_slash",
 		"cogs.utils.prefix.invite",
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
-		"cogs.utils.prefix.member_count"
+		"cogs.utils.prefix.member_count",
+		"cogs.utils.slash.set_confession",
+		"cogs.utils.slash.confession"
 	]
 
 	for cog in cog_list:
@@ -37,6 +41,8 @@ bot = commands.Bot(
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
+	await bot.tree.sync()
+	await SQLiteManager("database/database.db").init_if_not_exists()
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 
 bot.run(token = BOT_TOKEN)
