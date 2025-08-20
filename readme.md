@@ -1,4 +1,4 @@
-# SB Discord Bot**
+# SB Discord Bot
 * [Invite Bot](https://discord.com/oauth2/authorize?client_id=1045600567633915975&permissions=8&integration_type=0&scope=bot+applications.commands)
 * [Support Server](https://discord.gg/S9Z4uUmXbA)
 
