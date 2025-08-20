@@ -15,6 +15,7 @@ class HelpPrefix(commands.Cog):
 		dot_bottom_emo = emoji("DOT_BOTTOM")
 		prefix_emo = emoji("PREFIX")
 		separator_emo = emoji("SEPARATOR")
+		slash_emo = emoji("SLASH")
 		bot_prefix = prefix()
 
 		bot_user = self.bot.user
@@ -29,7 +30,15 @@ class HelpPrefix(commands.Cog):
 				f"{separator_emo}\n" \
 				f"*	{prefix_emo} `{bot_prefix}` invite\n" \
 				f"* {aliases_emo} Aliases: [`inv`, `invit`]\n" \
-				f"{dot_bottom_emo} Show bot invite URL & support server.\n"
+				f"{dot_bottom_emo} Show bot invite URL & support server.\n" \
+				f"{separator_emo}\n" \
+				f"* {slash_emo} `/set_confession`\n" \
+				f"* {aliases_emo} Aliases: `None`\n" \
+				f"{dot_bottom_emo} Setup your confession channel\n" \
+				f"{separator_emo}\n" \
+				f"* {slash_emo} `/confession`\n" \
+				f"* {aliases_emo} Aliases: `None`\n" \
+				f"{dot_bottom_emo} Send your message to confession channel\n" \
 			),
 			timestamp = datetime.now(),
 			color = 0xfac7c3

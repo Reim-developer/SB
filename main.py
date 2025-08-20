@@ -14,10 +14,13 @@ bot_intents.presences = False
 async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
+		"cogs.events.cooldown_slash",
 		"cogs.utils.prefix.invite",
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
-		"cogs.utils.prefix.member_count"
+		"cogs.utils.prefix.member_count",
+		"cogs.utils.slash.set_confession",
+		"cogs.utils.slash.confession"
 	]
 
 	for cog in cog_list:
@@ -74,6 +77,7 @@ async def sync(
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
+	await bot.tree.sync()
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 
 bot.run(token = BOT_TOKEN)
