@@ -21,4 +21,5 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+* Cảnh báo: Bạn sẽ cần đổi các emoji bot sử dụng tại [config](config/emojis.json)
 * Chúc bạn vui vẻ với bot.
