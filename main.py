@@ -1,13 +1,15 @@
 from json import load 
-from discord import Intents, Object, HTTPException
+from discord import Intents
 from discord.ext import commands
-from typing import Literal, Optional
+from sql.sql_manager import SQLiteManager
+from asyncio import run
 
 with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
 	BOT_TOKEN = json_data["BOT_TOKEN"]
 	BOT_PREFIX = json_data["BOT_PREFIX"]
 
+SHARD_COUNT =  2
 bot_intents = Intents.all()
 bot_intents.presences = False
 
@@ -31,53 +33,35 @@ async def __setup_cogs() -> None:
 		except Exception as error:
 			print(f"Could not load cog: {cog} with error: {error}")
 
-bot = commands.Bot(
+bot = commands.AutoShardedBot(
 	command_prefix = BOT_PREFIX, 
 	help_command = None, 
 	intents = bot_intents,
-	case_insensitive = True
+	case_insensitive = True,
+	shard_count = SHARD_COUNT,
+	shard_ids = [0, 1]
 )
-
-@bot.command()
-@commands.is_owner()
-async def sync(
-    ctx: commands.Context[commands.Bot], 
-    guilds: commands.Greedy[Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
-	if not guilds:
-		if spec == "~":
-			synced = await ctx.bot.tree.sync(guild = ctx.guild)
-		elif spec == "*":
-			if ctx.guild:
-				ctx.bot.tree.copy_global_to(guild = ctx.guild)
-				synced = await ctx.bot.tree.sync(guild = ctx.guild)
-		elif spec == "^":
-			ctx.bot.tree.clear_commands(guild = None)
-
-			await ctx.bot.tree.sync(guild = ctx.guild)
-			synced = []
-		else:
-			synced = await ctx.bot.tree.sync()
-
-			await ctx.send(
-				f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
-			)
-			return
-
-	ret = 0
-	for guild in guilds:
-		try:
-			await ctx.bot.tree.sync(guild=guild)
-		except HTTPException:
-			print("")
-		else:
-			ret += 1
-
-	await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
-	await bot.tree.sync()
-	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
+	if bot.shard_id == 0:
+		await bot.tree.sync()
+		await SQLiteManager("database/database.db").init_if_not_exists()
 
-bot.run(token = BOT_TOKEN)
+	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
+	print(f"Shard Count: {bot.shard_count}")
+	print(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
+	print(f"On: {len(bot.guilds)} servers")
+	print(f"On: {len(bot.users)} members")
+
+
+async def main() -> None:
+	async with bot:
+		await bot.start(token = BOT_TOKEN)
+
+try:
+	run(main())
+
+except KeyboardInterrupt:
+	print("\nCanceled.")

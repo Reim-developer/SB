@@ -7,11 +7,13 @@ from discord.ext import commands
 from sql.sql_manager import SQLiteManager
 from datetime import datetime
 from asyncio import sleep
+from datetime import datetime
 
 class ConfessionSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
 		self.sqlite_manager = SQLiteManager("database/database.db")
+		self.LOG_CHANNEL = 1057274847459295252
 
 	def __not_set_embed(self) -> Embed:
 		embed = Embed(
@@ -145,6 +147,20 @@ class ConfessionSlash(commands.Cog):
 			await sleep(0.5)
 			await msg.add_reaction("👍")
 			await msg.add_reaction("👎")
+
+			LOG_CHANNEL = self.bot.get_channel(self.LOG_CHANNEL)
+			if LOG_CHANNEL and isinstance(LOG_CHANNEL, TextChannel):
+				time_now = int(datetime.now().timestamp())
+
+				try:
+					await LOG_CHANNEL.send(content = (
+						f"* Message content: {message}\n" \
+						f"* Author ID: `{interaction.user.id}`\n" \
+						f"* Time: <t:{time_now}:R>"
+					))
+				
+				except Exception as e:
+					print(e)
 
 async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(ConfessionSlash(bot = bot))
