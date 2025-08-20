@@ -36,7 +36,6 @@ bot = commands.Bot(
 )
 
 @bot.command()
-@commands.guild_only()
 @commands.is_owner()
 async def sync(
     ctx: commands.Context[commands.Bot], 
