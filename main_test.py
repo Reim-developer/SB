@@ -22,7 +22,8 @@ async def __setup_cogs() -> None:
 		"cogs.utils.prefix.help",
 		"cogs.utils.prefix.member_count",
 		"cogs.utils.slash.set_confession",
-		"cogs.utils.slash.confession"
+		"cogs.utils.slash.confession",
+		"cogs.owner.prefix.black_list"
 	]
 
 	for cog in cog_list:
@@ -45,9 +46,8 @@ bot = commands.AutoShardedBot(
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
-	if bot.shard_id == 0:
-		await bot.tree.sync()
-		await SQLiteManager("database/database.db").init_if_not_exists()
+	await SQLiteManager("database/database.db").init_if_not_exists()
+	await bot.tree.sync()
 
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 	print(f"Shard Count: {bot.shard_count}")

@@ -113,6 +113,21 @@ class ConfessionSlash(commands.Cog):
 		if not guild:
 			return
 		
+		user = interaction.user
+		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+
+		if await is_blacklist:
+			await interaction.response.send_message(
+				content = (
+					f"Hello, {interaction.user.name}\n" \
+					"Sorry but you have been blacklisted, details " \
+					"please join our support server to appeal\n" \
+					"https://discord.gg/QknaXEh7"
+				),
+				ephemeral = True
+			)
+			return
+		
 		await interaction.response.defer(ephemeral = True)
 		channel_id = await self.sqlite_manager.confession_channel(guild_id = guild.id)
 		

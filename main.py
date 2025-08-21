@@ -45,9 +45,8 @@ bot = commands.AutoShardedBot(
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
-	if bot.shard_id == 0:
-		await bot.tree.sync()
-		await SQLiteManager("database/database.db").init_if_not_exists()
+	await bot.tree.sync()
+	await SQLiteManager("database/database.db").init_if_not_exists()
 
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 	print(f"Shard Count: {bot.shard_count}")

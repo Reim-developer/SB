@@ -21,7 +21,12 @@ class SQLiteManager:
 				confession_channel_id INTEGER NOT NULL
 			);
 		""")
-			
+			await sqlite.execute(
+		"""--sql
+			CREATE TABLE IF NOT EXISTS blacklist (
+				user_id INTEGER PRIMARY KEY
+			);
+		""")
 			await sqlite.commit()
 
 	async def set_confession_channel(
@@ -33,9 +38,28 @@ class SQLiteManager:
 		"""--sql
 			INSERT OR REPLACE INTO sb_bot (guild_id, confession_channel_id)
 			VALUES(?, ?)
-		""", (guild_id, channel_id))
+		""", (guild_id, channel_id,))
 			
 			await sqlite.commit()
+
+	async def set_blacklist_user(self, user_id: int) -> None:
+		async with connect(self.path.absolute()) as sqlite:
+			await sqlite.execute(
+		"""--sql
+			INSERT INTO blacklist (user_id)
+			VALUES(?)
+		""", (user_id,))
+			
+			await sqlite.commit()
+			
+	async def blacklist_user(self, user_id: int) -> bool:
+		async with connect(self.path.absolute()) as sqlite:
+			cursor = await sqlite.execute(
+				"""--sql
+					SELECT user_id FROM blacklist WHERE user_id = ?
+				""", (user_id,))
+			
+			return await cursor.fetchone() is not None
 
 	async def confession_channel(self, guild_id: int) -> Optional[int]:
 		async with connect(self.path.absolute()) as sqlite:
