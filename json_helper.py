@@ -12,8 +12,11 @@ def emoji(query: str) -> str:
 def prefix() -> str:
 	with open(file = "config/config.json", mode = "r", encoding = "utf-8") as emojis_file:
 		data = load(emojis_file)
-
-	if not data["BOT_PREFIX"]:
-		raise ValueError(f"Could not find bot prefix in configuration")
 	
 	return data["BOT_PREFIX"]
+
+def myanimelist_clientid() -> str:
+	with open(file = "config/config.json", mode = "r", encoding = "utf-8") as config_file:
+		data = load(config_file)
+
+	return data["MYANIMELIST_CLIENT_ID"]
