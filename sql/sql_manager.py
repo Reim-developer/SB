@@ -51,6 +51,14 @@ class SQLiteManager:
 		""", (user_id,))
 			
 			await sqlite.commit()
+
+	async def remove_blacklist_user(self, user_id: int) -> None:
+		async with connect(self.path.absolute()) as sqlite:
+			await sqlite.execute(
+		"""--sql
+			DELETE FROM blacklist WHERE user_id = ?
+		""", (user_id,))
+			await sqlite.commit()
 			
 	async def blacklist_user(self, user_id: int) -> bool:
 		async with connect(self.path.absolute()) as sqlite:
