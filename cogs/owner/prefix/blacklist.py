@@ -38,7 +38,7 @@ class BlackListPrefix(commands.Cog):
 	def __success_embed(self, user: User, reason: Optional[str]) -> Embed:
 		embed = Embed(
 			description = (
-				f"* Successfully black list: {user.name}\n" \
+				f"* Successfully blacklist: {user.name}\n" \
 				f"* User ID: `{user.id}`\n" \
 				f"* Reason `{reason if reason else 'No provided'}`"
 			),
