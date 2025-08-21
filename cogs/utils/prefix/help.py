@@ -16,6 +16,7 @@ class HelpPrefix(commands.Cog):
 		prefix_emo = emoji("PREFIX")
 		separator_emo = emoji("SEPARATOR")
 		slash_emo = emoji("SLASH")
+		anime_emo = emoji("ANIME")
 		bot_prefix = prefix()
 
 		bot_user = self.bot.user
@@ -39,6 +40,11 @@ class HelpPrefix(commands.Cog):
 				f"* {slash_emo} `/confession`\n" \
 				f"* {aliases_emo} Aliases: `None`\n" \
 				f"{dot_bottom_emo} Send your message to confession channel\n" \
+				f"{separator_emo}\n" \
+				f"{anime_emo} **Anime Commands:**\n" \
+				f"* {slash_emo} `my_animelist_info`\n" \
+				f"* {aliases_emo} Aliases: `None`\n" \
+				f"{dot_bottom_emo} Show anime information with `MyAnimeList` ID\n" \
 			),
 			timestamp = datetime.now(),
 			color = 0xfac7c3
