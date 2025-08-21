@@ -23,7 +23,8 @@ async def __setup_cogs() -> None:
 		"cogs.utils.prefix.member_count",
 		"cogs.utils.slash.set_confession",
 		"cogs.utils.slash.confession",
-		"cogs.owner.prefix.black_list"
+		"cogs.owner.prefix.blacklist",
+		"cogs.owner.prefix.unblacklist"
 	]
 
 	for cog in cog_list:
