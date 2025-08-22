@@ -2,6 +2,26 @@
 * [Invite Bot](https://discord.com/oauth2/authorize?client_id=1045600567633915975&permissions=8&integration_type=0&scope=bot+applications.commands)
 * [Support Server](https://discord.gg/S9Z4uUmXbA)
 
+## EN Document:
+* This bot is part of the Reim Empire project, owned by Reim a.k.a Kaxtr, a creative student and a magical high school girl. 
+* You are free to do anything with the bot, as this is an open-source project, but please note the GPL-3.0 license. 
+* Please respect the License, and I do not and never will support any form of business from this bot's open source. If someone claims they will write a Discord bot for you with the same features as this bot, or that they have cloned code, they are a scammer. Block them and with just 15 minutes of git clone and Python, you can have a better bot. 
+
+* How to use: 
+* You need Python & Pip. For details, you can google search or ask an AI. 
+* You need to install the libraries, it's simple, but first you need to clone the project. You can copy this and use it in a single command.
+```bash
+git clone https://github.com/Reim-developer/SB.git
+cd git
+pip install -r requirements.txt
+```
+* Then, get your Discord bot token from the Discord Developer Portal, fill it in config , and rename it to config.json. After filling in the information, just:
+```bash
+python main.py
+```
+* Warning: You will need to change the bot's emojis at [config](config/emojis.json)
+* Enjoy the bot.   
+
 ## VI Document:
 * Đây là bot thuộc dự án của Reim Empire, thuộc về sở hữu của Reim a.k.a Kaxtr, là một học sinh yêu thích sáng tạo và nữ sinh trung học phép thuật.
 * Bạn được quyền làm bất kì thứ gì với bot, đây là dự án mã nguồn mở, tuy nhiên xin hãy chú ý tới giấy phép GPL-3.0. 
