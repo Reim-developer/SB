@@ -1,13 +1,14 @@
 from discord.abc import GuildChannel
 from discord import (
 	Interaction, app_commands, Embed, Guild,
-	TextChannel
+	TextChannel, 
 )
 from discord.ext import commands
 from sql.sql_manager import SQLiteManager
 from datetime import datetime
 from asyncio import sleep
 from datetime import datetime
+from widgets.confession_widget import ReplyWidget
 
 class ConfessionSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
@@ -154,7 +155,10 @@ class ConfessionSlash(commands.Cog):
 		))
 
 		if isinstance(guild_channel, TextChannel):
-			msg = await guild_channel.send(embed = self.__confession_embed(msg = message))
+			msg = await guild_channel.send(
+				embed = self.__confession_embed(msg = message),
+				view = ReplyWidget(self.bot)
+			)
 			await msg.create_thread(
 				name = "What do you about this confession?",
 				auto_archive_duration = 1440
