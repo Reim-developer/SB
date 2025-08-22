@@ -3,6 +3,7 @@ from discord import Intents
 from discord.ext import commands
 from sql.sql_manager import SQLiteManager
 from asyncio import run
+from widgets.confession_widget import ReplyWidget
 
 with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -50,6 +51,7 @@ async def on_ready() -> None:
 	await __setup_cogs()
 	await SQLiteManager("database/database.db").init_if_not_exists()
 	await bot.tree.sync()
+	bot.add_view(view = ReplyWidget(bot = bot))
 
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 	print(f"Shard Count: {bot.shard_count}")
