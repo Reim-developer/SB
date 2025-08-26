@@ -70,8 +70,8 @@ async def on_ready() -> None:
 	bot.add_view(view = ReplyWidget(bot = bot))
 
 	sqlite_manager = SQLiteManager("database/database.db")
-	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
 	await sqlite_manager.init_if_not_exists()
+	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
 
 	await update_presence.start()
 
