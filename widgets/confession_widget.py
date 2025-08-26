@@ -9,6 +9,7 @@ from typing import Self
 from datetime import datetime
 from asyncio import sleep
 from discord.ext import commands
+from sql.sql_manager import SQLiteManager
 
 Bot = commands.AutoShardedBot | commands.Bot
 Author = User | Member
@@ -170,6 +171,7 @@ class ReplyWidget(View):
 	def __init__(self, bot: Bot) -> None:
 		super().__init__(timeout = None)
 		self.bot = bot
+		self.sqlite_manager = SQLiteManager("database/database.db")
 
 	__ANONYMOUS_BUTTON_ID: str = "ANONYMOUS_BUTTON_ID"
 	__PUBLIC_BUTTON_ID: str = "PUBLIC_BUTTON_ID"
@@ -184,6 +186,21 @@ class ReplyWidget(View):
 			self, interaction: Interaction, 
 			_: Button[Self]) -> None:
 		
+		user = interaction.user
+		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+
+		if await is_blacklist:
+			await interaction.response.send_message(
+				content = (
+					f"Hello, {interaction.user.name}\n" \
+					"Sorry but you have been blacklisted, details " \
+					"please join our support server to appeal\n" \
+					"https://discord.gg/QknaXEh7"
+				),
+				ephemeral = True
+			)
+			return
+		
 		await interaction.response.send_modal(ReplyAnonymousWidget(self.bot))
 
 	@button(
@@ -194,6 +211,21 @@ class ReplyWidget(View):
 	async def on_public_reply(
 			self, interaction: Interaction,
 			_: Button[Self]) -> None:
+		
+		user = interaction.user
+		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+
+		if await is_blacklist:
+			await interaction.response.send_message(
+				content = (
+					f"Hello, {interaction.user.name}\n" \
+					"Sorry but you have been blacklisted, details " \
+					"please join our support server to appeal\n" \
+					"https://discord.gg/QknaXEh7"
+				),
+				ephemeral = True
+			)
+			return
 		
 		await interaction.response.send_modal(PublicWidget(self.bot))
 	
