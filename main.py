@@ -11,8 +11,8 @@ with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as conf
 	BOT_TOKEN = json_data["BOT_TOKEN"]
 	BOT_PREFIX = json_data["BOT_PREFIX"]
 
-SHARD_COUNT =  2
-bot_intents = Intents.all()
+SHARD_COUNT 		  = 2
+bot_intents 		  = Intents.all()
 bot_intents.presences = False
 
 async def __setup_cogs() -> None:
@@ -28,6 +28,7 @@ async def __setup_cogs() -> None:
 		"cogs.utils.slash.giveaway",
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
+		"cogs.owner.prefix.sync_slash",
 		"cogs.anime.slash.anime_info"
 	]
 
@@ -62,6 +63,7 @@ async def update_presence() -> None:
 	print(f"On: {len(bot.guilds)} servers")
 	print(f"On: {len(bot.users)} members")	
 
+
 @bot.event
 async def on_ready() -> None:
 	await __setup_cogs()
@@ -71,7 +73,7 @@ async def on_ready() -> None:
 	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
 	await sqlite_manager.init_if_not_exists()
 
-	update_presence.start()
+	await update_presence.start()
 
 async def main() -> None:
 	async with bot:

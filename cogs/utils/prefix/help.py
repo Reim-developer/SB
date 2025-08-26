@@ -45,6 +45,11 @@ class HelpPrefix(commands.Cog):
 				f"* {slash_emo} `my_animelist_info`\n" \
 				f"* {aliases_emo} Aliases: `None`\n" \
 				f"{dot_bottom_emo} Show anime information with `MyAnimeList` ID\n" \
+				f"{separator_emo}\n" \
+				f"🎉 **Giveaway Commands:**\n" \
+				f"* {slash_emo} `giveaway_create`\n" \
+				f"* {aliases_emo} Aliases: `None`\n" \
+				f'{dot_bottom_emo} Create a giveaway\n' 
 			),
 			timestamp = datetime.now(),
 			color = 0xfac7c3
