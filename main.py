@@ -1,9 +1,10 @@
 from json import load 
-from discord import Intents
-from discord.ext import commands
+from discord import Intents, Status, Game
+from discord.ext import commands, tasks
 from sql.sql_manager import SQLiteManager
 from asyncio import run
 from widgets.confession_widget import ReplyWidget
+from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
 with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -24,6 +25,7 @@ async def __setup_cogs() -> None:
 		"cogs.utils.prefix.member_count",
 		"cogs.utils.slash.set_confession",
 		"cogs.utils.slash.confession",
+		"cogs.utils.slash.giveaway",
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
 		"cogs.anime.slash.anime_info"
@@ -46,19 +48,30 @@ bot = commands.AutoShardedBot(
 	shard_ids = [0, 1]
 )
 
-@bot.event
-async def on_ready() -> None:
-	await __setup_cogs()
-	await bot.tree.sync()
-	await SQLiteManager("database/database.db").init_if_not_exists()
-	bot.add_view(view = ReplyWidget(bot = bot))
 
+@tasks.loop(minutes = 5)
+async def update_presence() -> None:
+	await bot.change_presence(
+		status = Status.online,
+		activity = Game(name = f"With {len(bot.users)} users | {len(bot.guilds)} servers")
+	)
+	
 	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
 	print(f"Shard Count: {bot.shard_count}")
 	print(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
 	print(f"On: {len(bot.guilds)} servers")
-	print(f"On: {len(bot.users)} members")
+	print(f"On: {len(bot.users)} members")	
 
+@bot.event
+async def on_ready() -> None:
+	await __setup_cogs()
+	bot.add_view(view = ReplyWidget(bot = bot))
+
+	sqlite_manager = SQLiteManager("database/database.db")
+	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
+	await sqlite_manager.init_if_not_exists()
+
+	update_presence.start()
 
 async def main() -> None:
 	async with bot:
