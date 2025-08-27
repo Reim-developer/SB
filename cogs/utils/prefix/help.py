@@ -49,7 +49,11 @@ class HelpPrefix(commands.Cog):
 				f"🎉 **Giveaway Commands:**\n" \
 				f"* {slash_emo} `giveaway_create`\n" \
 				f"* {aliases_emo} Aliases: `None`\n" \
-				f'{dot_bottom_emo} Create a giveaway\n' 
+				f"{dot_bottom_emo} Create the giveaway\n" \
+				f"{separator_emo}\n" \
+				f"* {slash_emo} `giveaway_reroll`\n" \
+				f"* {aliases_emo} Aliases: `None`\n" \
+				f'{dot_bottom_emo} Reroll the giveaway\n' 
 			),
 			timestamp = datetime.now(),
 			color = 0xfac7c3

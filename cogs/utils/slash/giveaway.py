@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 from discord import (
-	app_commands, Interaction, Embed, TextChannel,
+	app_commands, Interaction, Embed,
 	Message
 )
 from discord.ext import commands
@@ -14,6 +14,7 @@ from core_utils.giveaway_timer import (
 	GiveawayData, GiveawayTimer, TimerData
 )
 from urllib.parse import urlparse
+from core_utils.type_alias import CanSendMessageChannel
 
 _MAX_TITLE = 210
 _MAX_DESCRIPTION = 4000
@@ -93,7 +94,10 @@ class GiveawaysSlash(commands.Cog):
 			title = f"🎉 {author.name}'s Giveaway",
 			description = (
 				"**__Prize:__**\n" \
-				f"{prize}\n\n" \
+				f"{(
+					f'{prize[0:4000]} and {len(prize)} character(s)...'
+					if  len(prize) >= _MAX_DESCRIPTION else prize
+				)}\n\n" \
 				f"**__End At:__** <t:{end_at_unix_time}>"
 			),
 			timestamp = datetime.now(),
@@ -142,7 +146,7 @@ class GiveawaysSlash(commands.Cog):
 			image_url = image_url
 		)
 		current_channel = interaction.channel
-		if isinstance(current_channel, TextChannel):
+		if isinstance(current_channel, CanSendMessageChannel):
 			message = await current_channel.send(
 				embed = self.__giveaway_embed(
 					gws_data = gws_data 		
