@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TypeAlias
 from discord import (
-	app_commands, Interaction, Embed,
+	Role, app_commands, Interaction, Embed,
 	Message
 )
 from discord.ext import commands
@@ -18,12 +18,14 @@ from core_utils.type_alias import CanSendMessageChannel
 
 _MAX_TITLE = 210
 _MAX_DESCRIPTION = 4000
+_CSMC: TypeAlias = CanSendMessageChannel
 @dataclass
 class _GiveawayData:
 	prize: str
 	time: int
 	interaction: Interaction
 	image_url: Optional[str]
+	mention_role: Optional[Role]
 
 class GiveawaysSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
@@ -83,13 +85,14 @@ class GiveawaysSlash(commands.Cog):
 
 		await message.edit(embed = embed)
 	
-	def __giveaway_embed(self, gws_data: _GiveawayData) -> Embed:
+	async def __giveaway_embed_send(self, gws_data: _GiveawayData) -> Optional[Message]:
 		interaction = gws_data.interaction
 		end_at = gws_data.time
 		prize = gws_data.prize
 		end_at_unix_time = int(time() + end_at)
+		ping_message = gws_data.mention_role
 
-		author = interaction.user
+		author = interaction.user	
 		embed = Embed(
 			title = f"🎉 {author.name}'s Giveaway",
 			description = (
@@ -109,9 +112,21 @@ class GiveawaysSlash(commands.Cog):
 		)
 		if gws_data.image_url and self.__valid_url(url = gws_data.image_url):
 			embed.set_image(url = gws_data.image_url)
-	
-		return embed
 
+		text_channel = interaction.channel
+		if isinstance(text_channel, _CSMC):
+			message = await text_channel.send(
+				content = (
+					f"{ping_message.mention}" 
+					if ping_message else ''
+				),
+				embed = embed
+			)
+
+			return message
+		
+		return None
+	
 	@app_commands.command(
 		name = "giveaway_create",
 		description = "Create a giveaway"
@@ -119,13 +134,23 @@ class GiveawaysSlash(commands.Cog):
 	@app_commands.describe(
 		prize = "Your giveaway prize",
 		end_at = "How long does the giveaway last?",
-		image_url = "Your giveaway image (URL)"
+		image_url = "Your giveaway image (URL)",
+		mention_role = "The role you want to mention"
 	)
-	@app_commands.checks.has_permissions(manage_channels = True)
+	@app_commands.checks.has_permissions(
+			manage_channels = True, 
+			mention_everyone = True)
+	@app_commands.checks.bot_has_permissions(
+			embed_links = True,
+			mention_everyone = True,
+			send_messages = True,
+			read_message_history = True 
+	)
 	@app_commands.checks.cooldown(1, 10, key = lambda i: i.user.id)
 	async def giveaway_create(
 			self, interaction: Interaction,
-			prize: str, end_at: str, image_url: Optional[str] = None, ) -> None:
+			prize: str, end_at: str, image_url: Optional[str] = None,
+			mention_role: Optional[Role] = None) -> None:
 		if not interaction.guild:
 			return
 		
@@ -143,38 +168,36 @@ class GiveawaysSlash(commands.Cog):
 			prize = prize,
 			time = time_format,
 			interaction = interaction,
-			image_url = image_url
+			image_url = image_url,
+			mention_role = mention_role,
 		)
 		current_channel = interaction.channel
-		if isinstance(current_channel, CanSendMessageChannel):
-			message = await current_channel.send(
-				embed = self.__giveaway_embed(
-					gws_data = gws_data 		
+		if isinstance(current_channel, _CSMC):
+			message = await self.__giveaway_embed_send(gws_data = gws_data)
+			if message:
+				giveaway_id = message.id
+				time_end_at = int(time() + time_format)
+
+				await self.__add_gws_id(message = message)
+				await interaction.followup.send(
+					content = f"Successfully create giveaway. Your giveaway ID: {giveaway_id}",
+					ephemeral = True
 				)
-			)
-			giveaway_id = message.id
-			time_end_at = int(time() + time_format)
+				await message.add_reaction("🎉")
+				await sleep(0.5)
 
-			await self.__add_gws_id(message = message)
-			await interaction.followup.send(
-				content = f"Successfully create giveaway. Your giveaway ID: {giveaway_id}",
-				ephemeral = True
-			)
-			await message.add_reaction("🎉")
-			await sleep(0.5)
+				await self.sqlite_manager.set_giveaway(
+					channel_id =  current_channel.id,
+					giveaway_id = giveaway_id, 
+					time = time_end_at
+				)
 
-			await self.sqlite_manager.set_giveaway(
-				channel_id =  current_channel.id,
-				giveaway_id = giveaway_id, 
-				time = time_end_at
-			)
-
-			giveaway_data = GiveawayData(
-				message_id = giveaway_id,
-				channel_id = current_channel.id,
-				end_at = time_end_at
-			)
-			await self.__giveaway_timer.start(gws_data = giveaway_data)
+				giveaway_data = GiveawayData(
+					message_id = giveaway_id,
+					channel_id = current_channel.id,
+					end_at = time_end_at
+				)
+				await self.__giveaway_timer.start(gws_data = giveaway_data)
  
 async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(GiveawaysSlash(bot = bot))
