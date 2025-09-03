@@ -246,7 +246,7 @@ class HelpSelectWidget(View):
 
 		if self.message:
 			try:
-				await self.message.edit(content = "This message is expired")
+				await self.message.edit(content = "This message is expired", view = None)
 
 			except:
 				... # Ignore some exception here. The message may have deleted before.
