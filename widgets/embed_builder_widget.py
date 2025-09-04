@@ -45,23 +45,42 @@ class _EmbedData:
 	footer_text: Optional[str]
 	author_text: Optional[str]
 
+@dataclass
+class _BuilderOptionsData:
+	embed_data: _EmbedData
+	message: InteractionMessage
+	bot: commands.Bot
+
 class _BuilderOptions(View):
 	_b = button
 	_B_S = ButtonStyle
 	_E = _EmbedData
+	_B_O_D = _BuilderOptionsData
 
-	def __init__(
-			self, embed_data: _E,
-			message: InteractionMessage,
-			bot: commands.Bot) -> None:
+	def __init__(self, builder_data: _B_O_D) -> None:
 		super().__init__()
-		self.embed_data = embed_data
-		self.message = message
-		self.bot = bot
+		self.embed_data = builder_data.embed_data
+		self.message = builder_data.message
+		self.bot = builder_data.bot
 
 	@_b(
-		label = "Send this embed to current channel",
-		style = _B_S.primary,
+		label = "Edit Embed",
+		emoji = "<:edit:1413072289280299120>",
+		style = _B_S.gray
+	)
+	async def on_edit(
+			self, interaction: Interaction,
+			_: Button[Self]) -> None:
+		await interaction.response.send_modal(
+			EmbedBuilderWidget(bot = self.bot)
+			.set_default_modal(self.embed_data)
+		)
+		await self.message.delete()
+
+	@_b(
+		label = "Send Embed",
+		emoji = "<:Embed:1413072146334486540>",
+		style = _B_S.success,
 	)
 	async def on_send(
 			self, interaction: Interaction,
@@ -80,7 +99,7 @@ class _BuilderOptions(View):
 					Embed(
 						title = title,
 						description = description,
-						color = color
+						color = color,
 					).set_footer(text = footer_text)
 					.set_author(name = author_text)
 				)
@@ -118,18 +137,18 @@ class EmbedBuilderWidget(Modal):
 		required = False
 	)
 	footer_text_build: _T_INPUT[Self] = TextInput(
-		label = "Embed Footer (Optional)",
+		label 		= "Embed Footer (Optional)",
 		placeholder = "...",
-		style = _T_S.paragraph,
-		max_length = 2048,
-		required = False
+		style 		= _T_S.paragraph,
+		max_length  = 2048,
+		required 	= False
 	)
 	author_text_build: _T_INPUT[Self] = TextInput(
-		label = "Embed Author (Optional)",
+		label 		= "Embed Author (Optional)",
 		placeholder = "...",
-		style = _T_S.short,
-		max_length = 256,
-		required = False
+		style 		= _T_S.short,
+		max_length 	= 256,
+		required 	= False
 	)
 
 	def __init__(self, bot: commands.Bot) -> None:
@@ -177,13 +196,22 @@ class EmbedBuilderWidget(Modal):
 
 		errors = [msg_fn() for condition, msg_fn in checks if condition]
 		return errors, len(errors)
+	
+	def set_default_modal(self, embed_data: _EmbedData) -> Self:
+		self.title_build.default = embed_data.title
+		self.description_build.default = embed_data.description
+		self.color_build.default = str(
+			embed_data.color 
+		) if embed_data.color else None
+		self.author_text_build.default = embed_data.author_text
+		self.footer_text_build.default = embed_data.footer_text
+
+		return self
 
 	async def on_submit(self, interaction: Interaction) -> None:
 		title: Optional[str] = (
 			self.title_build.value 
-			if self.title_build.value 
-			else None
-		)
+		) if self.title_build.value else None
 		color: Optional[int] = _fmt_color(self.color_build.value)
 		description: str = self.description_build.value
 		footer_text: Optional[str] = (
@@ -245,7 +273,9 @@ class EmbedBuilderWidget(Modal):
 
 		interaction_message = await interaction.original_response()
 		await interaction.edit_original_response(view = _BuilderOptions(
-			embed_data = embed_data,
-			message = interaction_message,
-			bot = self.bot
-		))
+			_BuilderOptionsData(
+				embed_data = embed_data,
+				message = interaction_message,
+				bot = self.bot
+			))
+		)
