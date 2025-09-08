@@ -27,6 +27,7 @@ async def __setup_cogs() -> None:
 		"cogs.utils.slash.confession",
 		"cogs.utils.slash.giveaway",
 		"cogs.utils.slash.giveaway_reroll",
+		"cogs.utils.slash.embed_builder",
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
 		"cogs.owner.prefix.sync_slash",
