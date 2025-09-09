@@ -13,8 +13,8 @@ from sql.sql_manager import SQLiteManager
 from core_utils.giveaway_timer import (
 	GiveawayData, GiveawayTimer, TimerData
 )
-from urllib.parse import urlparse
 from core_utils.type_alias import CanSendMessageChannel
+from core_utils.url import URLUtils
 
 _MAX_TITLE = 210
 _MAX_DESCRIPTION = 4000
@@ -35,15 +35,6 @@ class GiveawaysSlash(commands.Cog):
 			bot = self.bot,
 			sqlite_manager = self.sqlite_manager
 		))
-
-	def __valid_url(self, url: str) -> bool:
-		try:
-			result = urlparse(url = url)
-
-			return all([result.scheme, result.netloc])
-		
-		except:
-			return False
 
 	def __invalid_time(self, wrong_time: str) -> Embed:
 		embed = Embed(
@@ -110,7 +101,7 @@ class GiveawaysSlash(commands.Cog):
 			url =  author.avatar.url
 			if author.avatar else None
 		)
-		if gws_data.image_url and self.__valid_url(url = gws_data.image_url):
+		if gws_data.image_url and URLUtils.valid_url(url = gws_data.image_url):
 			embed.set_image(url = gws_data.image_url)
 
 		text_channel = interaction.channel
