@@ -19,6 +19,7 @@ async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
 		"cogs.events.cooldown_slash",
+		"cogs.logging.on_bot_leave",
 		"cogs.utils.prefix.invite",
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
