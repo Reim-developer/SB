@@ -7,7 +7,7 @@ from discord.ext import commands
 from discord.ui import Modal, TextInput, View, button, Button
 from discord.ui.text_input import V
 from typing import (
-	Callable, List, Optional, 
+	Callable, List, LiteralString, Optional, 
 	Self, Tuple, TypeAlias
 )
 from re import match as regex_match
@@ -21,6 +21,7 @@ _ERR_RESULT = Tuple[List[str], int]
 _CHECKS: TypeAlias = List[Tuple[bool, Callable[[], str]]]
 _LIMIT_LENGTH: int = 6000
 _CSMC = CanSendMessageChannel
+_NIL_STR: LiteralString = ""
 
 def _is_valid_hex(hex: str) -> bool:
 	pattern = r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
@@ -36,7 +37,14 @@ def _fmt_color(hex: str) -> Optional[int]:
 		return int(hex[1:], _BASE_INDEX)
 	
 	return int(hex, _BASE_INDEX)
-	
+
+@dataclass
+class ImageData:
+	image: Optional[str]
+	thumbnail: Optional[str]
+	footer_icon: Optional[str]
+	author_icon: Optional[str]
+
 @dataclass
 class _EmbedData:
 	title: Optional[str]
@@ -44,6 +52,7 @@ class _EmbedData:
 	color: Optional[int]
 	footer_text: Optional[str]
 	author_text: Optional[str]
+	image_data: ImageData
 
 @dataclass
 class _BuilderOptionsData:
@@ -57,11 +66,14 @@ class _BuilderOptions(View):
 	_E = _EmbedData
 	_B_O_D = _BuilderOptionsData
 
-	def __init__(self, builder_data: _B_O_D) -> None:
+	def __init__(
+			self, builder_data: _B_O_D,
+			image_data: ImageData) -> None:
 		super().__init__()
 		self.embed_data = builder_data.embed_data
 		self.message = builder_data.message
 		self.bot = builder_data.bot
+		self.image_data = image_data
 
 	@_b(
 		label = "Edit Embed",
@@ -72,7 +84,7 @@ class _BuilderOptions(View):
 			self, interaction: Interaction,
 			_: Button[Self]) -> None:
 		await interaction.response.send_modal(
-			EmbedBuilderWidget(bot = self.bot)
+			EmbedBuilderWidget(bot = self.bot, image_data = self.image_data)
 			.set_default_modal(self.embed_data)
 		)
 		await self.message.delete()
@@ -88,22 +100,51 @@ class _BuilderOptions(View):
 		
 		current_channel = interaction.channel
 		if isinstance(current_channel, _CSMC):
-			title = self.embed_data.title
-			description = self.embed_data.description
-			color = self.embed_data.color
-			footer_text = self.embed_data.footer_text
-			author_text = self.embed_data.author_text
+			embed_title 	  = (self.embed_data.title) \
+				if self.embed_data.title else None
+			
+			embed_description = self.embed_data.description
+			embed_color 	  = self.embed_data.color
+			footer_text 	  = self.embed_data.footer_text
+			author_text 	  = (self.embed_data.author_text) \
+				if self.embed_data.author_text else _NIL_STR
 
 			await current_channel.send(
 				embed = (
 					Embed(
-						title = title,
-						description = description,
-						color = color,
-					).set_footer(text = footer_text)
-					.set_author(name = author_text)
+						title 		= embed_title,
+						description = embed_description,
+						color 		= embed_color,
+					)
+					.set_footer(
+						text 	 = footer_text,
+						icon_url = (
+							self.image_data.footer_icon
+							if self.image_data.footer_icon
+							else None
+						)
+					)
+					.set_author(
+						name 	 = author_text,
+						icon_url = (
+							self.image_data.author_icon
+							if self.image_data.author_icon 
+							else None
+						)				
+					)
+					.set_image(url = (
+						self.image_data.image
+						if self.image_data.image
+						else None
+					)
+				).set_thumbnail(
+					url = (
+						self.image_data.thumbnail
+						if self.image_data.thumbnail
+						else None
+					)
 				)
-			)
+			))
 
 			await interaction.response.send_message(
 				content = (
@@ -151,9 +192,12 @@ class EmbedBuilderWidget(Modal):
 		required 	= False
 	)
 
-	def __init__(self, bot: commands.Bot) -> None:
+	def __init__(
+			self, bot: commands.Bot,
+			image_data: ImageData) -> None:
 		super().__init__(title = "Setup Embed")
 		self.bot = bot
+		self.image_data = image_data
 
 	def __generate_warnings(self, embed_data: _EmbedData) -> _WARNING_RESULT:
 		warnings_list = [
@@ -165,44 +209,42 @@ class EmbedBuilderWidget(Modal):
 		return warnings_list, len(warnings_list)
 	
 	def __generate_errors(self) -> _ERR_RESULT:
-		TITLE_LENGTH       = len(self.title_build.value)
-		DESCRIPTION_LENGTH = len(self.description_build.value)
-		FOOTER_TEXT_LENGTH = len(self.footer_text_build.value)
-		AUTHOR_TEXT_LENGTH = len(self.author_text_build.value)
-
-		checks: _CHECKS = [
-			(
-				TITLE_LENGTH +
-				DESCRIPTION_LENGTH +
-				AUTHOR_TEXT_LENGTH +
-				FOOTER_TEXT_LENGTH > _LIMIT_LENGTH,
-				lambda: (
-					"* **Your embed cannot be sent because it " \
-					f"exceeds Discord's {_LIMIT_LENGTH} character limit.**\n" \
-					"* **Traceback:**\n" 
-					f"* Title Length: `{TITLE_LENGTH}` character(s)\n" \
-					f"* Description Length: `{DESCRIPTION_LENGTH}` characters(s)\n" \
-					f"* Footer Text Length: `{FOOTER_TEXT_LENGTH}` characters(s)"
-				)
-			),
-			(
-				bool(self.color_build.value and not _is_valid_hex(self.color_build.value)),
-				lambda: (
-					"* Embed color does not exists, it only accepts HEX color format\n" \
-					f"* Your embed color is: `{self.color_build.value}`"
-				)
-			),
+			TITLE_LENGTH       = len(self.title_build.value)
+			DESCRIPTION_LENGTH = len(self.description_build.value)
+			FOOTER_TEXT_LENGTH = len(self.footer_text_build.value)
+			AUTHOR_TEXT_LENGTH = len(self.author_text_build.value)
+		
+			checks: _CHECKS = [
+				(
+					TITLE_LENGTH +
+					DESCRIPTION_LENGTH +
+					AUTHOR_TEXT_LENGTH +
+					FOOTER_TEXT_LENGTH > _LIMIT_LENGTH,
+					lambda: (
+						"* **Your embed cannot be sent because it " \
+						f"exceeds Discord's {_LIMIT_LENGTH} character limit.**\n" \
+						"* **Traceback:**\n" 
+						f"* Title Length: `{TITLE_LENGTH}` character(s)\n" \
+						f"* Description Length: `{DESCRIPTION_LENGTH}` characters(s)\n" \
+						f"* Footer Text Length: `{FOOTER_TEXT_LENGTH}` characters(s)"
+					)
+				),
+				(
+					bool(self.color_build.value and not _is_valid_hex(self.color_build.value)),
+					lambda: (
+						"* Embed color does not exists, it only accepts HEX color format\n" \
+						f"* Your embed color is: `{self.color_build.value}`\n"
+					)
+				),
 		]
 
-		errors = [msg_fn() for condition, msg_fn in checks if condition]
-		return errors, len(errors)
+			errors = [msg_fn() for condition, msg_fn in checks if condition]
+			return errors, len(errors)
 	
 	def set_default_modal(self, embed_data: _EmbedData) -> Self:
-		self.title_build.default = embed_data.title
+		self.title_build.default 	   = embed_data.title
 		self.description_build.default = embed_data.description
-		self.color_build.default = str(
-			embed_data.color 
-		) if embed_data.color else None
+		self.color_build.default       = str(embed_data.color) if embed_data.color else None
 		self.author_text_build.default = embed_data.author_text
 		self.footer_text_build.default = embed_data.footer_text
 
@@ -226,11 +268,12 @@ class EmbedBuilderWidget(Modal):
 		)
 
 		embed_data = _EmbedData(
-			title = title,
+			title 		= title, 		
 			description = description,
-			color = color,
+			color 		= color, 		
 			footer_text = footer_text,
-			author_text = author_text
+			author_text = author_text,
+			image_data	= self.image_data 
 		)
 		
 		warnings_reason, warning_count = self.__generate_warnings(
@@ -240,7 +283,7 @@ class EmbedBuilderWidget(Modal):
 		error = "\n".join(error_msg)
 		if err_count:
 			await interaction.response.send_message(
-				content = error,
+				content   = error,
 				ephemeral = True
 			)
 			return
@@ -263,11 +306,41 @@ class EmbedBuilderWidget(Modal):
 				)}" \
 				"**__Preview:__**\n"
 			),
-			embed = _E(
-				title = title if title else None,
-				description = description,
-				color = color if color else None,
-			).set_footer(text = footer_text if footer_text else None),
+			embed = (_E(
+					title 		= title if title else _NIL_STR,
+					description = description,
+					color 		= color if color else None,
+				)
+				.set_author(
+					name 	 = self.author_text_build 
+						if self.author_text_build else _NIL_STR,
+
+					icon_url = self.image_data.author_icon
+						if self.image_data.author_icon else None 
+				)
+				.set_footer(
+					text 	 = footer_text if footer_text else None,
+					icon_url = (
+						self.image_data.footer_icon
+						if self.image_data.footer_icon 
+						else None
+					)
+				)
+				.set_image(
+					url = (
+						self.image_data.image
+						if self.image_data.image
+						else None
+					)
+				)
+				.set_thumbnail(
+					url = (
+						self.image_data.thumbnail
+						if self.image_data.thumbnail
+						else None
+					)
+				)
+			),
 			ephemeral = True,
 		)
 
@@ -277,5 +350,5 @@ class EmbedBuilderWidget(Modal):
 				embed_data = embed_data,
 				message = interaction_message,
 				bot = self.bot
-			))
+			), self.image_data)
 		)
