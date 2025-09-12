@@ -19,6 +19,7 @@ async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
 		"cogs.events.cooldown_slash",
+		"cogs.logging.on_bot_leave",
 		"cogs.utils.prefix.invite",
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
@@ -30,6 +31,7 @@ async def __setup_cogs() -> None:
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
 		"cogs.owner.prefix.sync_slash",
+		"cogs.utils.slash.embed_builder",
 		"cogs.anime.slash.anime_info"
 	]
 
