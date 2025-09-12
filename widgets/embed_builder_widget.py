@@ -1,7 +1,7 @@
 from dataclasses import dataclass, fields
 from discord import (
 	Interaction, TextStyle, Embed, ButtonStyle,
-	InteractionMessage
+	WebhookMessage
 )
 from discord.ext import commands
 from discord.ui import Modal, TextInput, View, button, Button
@@ -57,7 +57,7 @@ class _EmbedData:
 @dataclass
 class _BuilderOptionsData:
 	embed_data: _EmbedData
-	message: InteractionMessage
+	message: WebhookMessage
 	bot: commands.Bot
 
 class _BuilderOptions(View):
@@ -281,8 +281,11 @@ class EmbedBuilderWidget(Modal):
 		)
 		error_msg, err_count = self.__generate_errors()
 		error = "\n".join(error_msg)
+		await interaction.response.defer(
+			ephemeral = True
+		)
 		if err_count:
-			await interaction.response.send_message(
+			await interaction.followup.send(
 				content   = error,
 				ephemeral = True
 			)
@@ -290,7 +293,7 @@ class EmbedBuilderWidget(Modal):
 
 		warn = "\n".join(warnings_reason)
 
-		await interaction.response.send_message(
+		message = await interaction.followup.send(
 			content = (
 				"**__Information:__**\n" \
 				f"{(
@@ -342,13 +345,13 @@ class EmbedBuilderWidget(Modal):
 				)
 			),
 			ephemeral = True,
+			wait 	  =  True
 		)
-
-		interaction_message = await interaction.original_response()
-		await interaction.edit_original_response(view = _BuilderOptions(
+		
+		await message.edit(view = _BuilderOptions(
 			_BuilderOptionsData(
 				embed_data = embed_data,
-				message = interaction_message,
+				message = message,
 				bot = self.bot
 			), self.image_data)
 		)
