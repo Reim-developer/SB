@@ -63,7 +63,13 @@ class HelpSelectWidget(View):
 					
 					f"* {self.prefix_emo} `{self.bot_prefix}` membercount\n" \
 					f"* {self.aliases_emo} Aliases: [`mc`]\n" \
-					f"{self.dot_bottom_emo} Show the server member count."
+					f"{self.dot_bottom_emo} Show the server member count.\n"
+
+					f"{self.separator_emo}\n" \
+					
+					f"* {self.slash_emo} `embed_builder`\n" \
+					f"* {self.aliases_emo} Aliases: `None`\n" \
+					f"{self.dot_bottom_emo} Build & send customize embed."
 				),
 				timestamp = datetime.now(),
 				color = 0xf2e2c9
