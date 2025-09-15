@@ -13,13 +13,13 @@ with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as
 
 SHARD_COUNT =  2
 bot_intents = Intents.all()
-# bot_intents.presences = False
-
+#
 async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
 		"cogs.events.cooldown_slash",
 		"cogs.logging.on_bot_leave",
+		"cogs.logging.on_bot_join",
 		"cogs.utils.prefix.invite",
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
