@@ -1,15 +1,17 @@
 from typing import LiteralString
 from discord.ext import commands
 from discord.guild import Guild
-from discord import AllowedMentions
-from core_utils.type_alias import CanSendMessageChannel
+from core_utils.type_alias import (
+	CanSendMessageChannel, DisableAllMentions
+)
 from sql.sql_manager import SQLiteManager
 
-_CSMC = CanSendMessageChannel
-_AL = AllowedMentions
-_SQL = SQLiteManager
-_DB: LiteralString = "database/database.db"
-_TABLE_NAME: LiteralString = "sb_bot"
+_LTS = LiteralString
+_CSMC 			  = CanSendMessageChannel
+_SQL 		 	  = SQLiteManager
+_DB: _LTS 		  = "database/database.db"
+_DAM 			  =  DisableAllMentions
+_TABLE_NAME: _LTS = "sb_bot"
 
 class OnBotLeaveLogging(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
@@ -32,11 +34,7 @@ class OnBotLeaveLogging(commands.Cog):
 					f"* Guild ID: `{guild.id}`\n" \
 					f"* Current Guild Count: `{len(self.bot.guilds)}` guild"
 				),
-				allowed_mentions = _AL(
-					everyone = False,
-					users = False,
-					roles = False
-				)
+				allowed_mentions = _DAM
 			)
 
 async def setup(bot: commands.Bot) -> None:
