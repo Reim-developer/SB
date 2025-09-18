@@ -11,7 +11,7 @@ _CSMC 			  = CanSendMessageChannel
 _SQL 		 	  = SQLiteManager
 _DB: _LTS 		  = "database/database.db"
 _DAM 			  =  DisableAllMentions
-_TABLE_NAME: _LTS = "sb_bot"
+_SB_TABLE_NAME: _LTS = "sb_bot"
 
 class OnBotLeaveLogging(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
@@ -19,14 +19,18 @@ class OnBotLeaveLogging(commands.Cog):
 		self.LOG_CHANNEL = self.bot.get_channel(1410300232348078093)
 		self.__sql_manager = _SQL(_DB)
 
+	async def __clear_data(self, guild_id: int) -> None:
+		await self.__sql_manager.exec(
+			query = 
+				f"""--sql
+					DELETE FROM {_SB_TABLE_NAME} WHERE guild_id = ?
+				""", parameters = (guild_id,)
+		)
+
 	@commands.Cog.listener()
 	async def on_guild_remove(self, guild: Guild) -> None:
 		if isinstance(self.LOG_CHANNEL, _CSMC):
-			await self.__sql_manager.exec(
-				query = f"""--sql
-					DELETE FROM {_TABLE_NAME} WHERE guild_id = ?
-				""", parameters = (guild.id,)
-			)
+			await self.__clear_data(guild_id = guild.id)
 			await self.LOG_CHANNEL.send(
 				content = (
 					f"**__Bot Leave Notification:__**\n" \
