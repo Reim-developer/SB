@@ -2,7 +2,6 @@ from json import load
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
 from sql.sql_manager import SQLiteManager
-from asyncio import run
 from widgets.confession_widget import ReplyWidget
 from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
@@ -13,7 +12,7 @@ with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as
 
 SHARD_COUNT =  2
 bot_intents = Intents.all()
-#
+
 async def __setup_cogs() -> None:
 	cog_list = [
 		"cogs.events.cooldown",
@@ -78,12 +77,4 @@ async def on_ready() -> None:
 
 	await update_presence.start()
 
-async def main() -> None:
-	async with bot:	
-		await bot.start(token = BOT_TOKEN)
-
-try:
-	run(main())
-
-except KeyboardInterrupt:
-	print("\nCanceled.")
+bot.run(token = BOT_TOKEN)
