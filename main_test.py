@@ -24,6 +24,7 @@ async def __setup_cogs() -> None:
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
 		"cogs.utils.prefix.member_count",
+		"cogs.utils.prefix.server_info",
 		"cogs.utils.slash.set_confession",
 		"cogs.utils.slash.confession",
 		"cogs.utils.slash.giveaway",
@@ -49,7 +50,7 @@ bot = commands.AutoShardedBot(
 	intents = bot_intents,
 	case_insensitive = True,
 	shard_count = SHARD_COUNT,
-	shard_ids = [0, 1]
+	shard_ids = [0, 1],
 )
 
 @tasks.loop(minutes = 5)
