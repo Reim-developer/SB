@@ -1,0 +1,6 @@
+[database]
+dbname = "YOUR DATABASE NAME HERE"
+user = "YOUR USER NAME HERE"
+port = 0                           # Replace with your port
+host = "YOUR HOST"
+password = "YOUR PASSWORD"

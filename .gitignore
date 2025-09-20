@@ -2,3 +2,4 @@ __pycache__
 config/config.json
 config/config.test.json
 *.db
+unit_tests/toml/db_cfg.toml
