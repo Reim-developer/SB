@@ -1,9 +1,11 @@
 from json import load 
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
-from sql.sql_manager import SQLiteManager
+# from sql.sql_manager import SQLiteManager
+from core_utils.logging import Log
+from sql.postgres_manager import PostgresManager
 from widgets.confession_widget import ReplyWidget
-from core_utils.giveaway_timer import GiveawayTimer, TimerData
+# from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
 with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -59,11 +61,11 @@ async def update_presence() -> None:
 		activity = Game(name = f"With {len(bot.users)} users | {len(bot.guilds)} servers")
 	)
 	
-	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
-	print(f"Shard Count: {bot.shard_count}")
-	print(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
-	print(f"On: {len(bot.guilds)} servers")
-	print(f"On: {len(bot.users)} members")	
+	Log.info(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
+	Log.info(f"Shard Count: {bot.shard_count}")
+	Log.info(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
+	Log.info(f"On: {len(bot.guilds)} servers")
+	Log.info(f"On: {len(bot.users)} members")	
 
 @bot.event
 async def on_ready() -> None:
@@ -71,9 +73,12 @@ async def on_ready() -> None:
 	await bot.tree.sync()
 	bot.add_view(view = ReplyWidget(bot = bot))
 
-	sqlite_manager = SQLiteManager("database/database.db")
-	await sqlite_manager.init_if_not_exists()
-	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
+	async with PostgresManager() as postgres:
+		await postgres.init_if_not_exists()
+
+	# sqlite_manager = SQLiteManager("database/database.db")
+	# await sqlite_manager.init_if_not_exists()
+	# await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
 
 	await update_presence.start()
 
