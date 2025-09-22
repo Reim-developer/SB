@@ -1,2 +1,0 @@
-postgres:
-	@python postgres.py
