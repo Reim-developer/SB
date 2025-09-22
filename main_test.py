@@ -3,7 +3,7 @@ from discord import Intents, Status, Game
 from discord.ext import commands, tasks
 # from sql.sql_manager import SQLiteManager
 from core_utils.logging import Log
-from sql.postgres_manager import PostgresManager
+from core_utils.container import container_instance
 from widgets.confession_widget import ReplyWidget
 # from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
@@ -73,13 +73,13 @@ async def on_ready() -> None:
 	await bot.tree.sync()
 	bot.add_view(view = ReplyWidget(bot = bot))
 
-	async with PostgresManager() as postgres:
-		await postgres.init_if_not_exists()
+	postgres_manager = container_instance.get_postgres_manager()
+	await postgres_manager.init_if_not_exists()
 
 	# sqlite_manager = SQLiteManager("database/database.db")
 	# await sqlite_manager.init_if_not_exists()
 	# await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
 
 	await update_presence.start()
-
+	
 bot.run(token = BOT_TOKEN)
