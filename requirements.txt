@@ -1,4 +1,5 @@
 discord
 aiosqlite
 aiohttp
-psycopg2
+psycopg
+psycopg-pool
