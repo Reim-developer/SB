@@ -1,8 +1,7 @@
 from json import load 
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
-from sql.sql_manager import SQLiteManager
-from asyncio import run
+from core_utils.container import container_instance
 from widgets.confession_widget import ReplyWidget
 from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
@@ -11,7 +10,7 @@ with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as conf
 	BOT_TOKEN = json_data["BOT_TOKEN"]
 	BOT_PREFIX = json_data["BOT_PREFIX"]
 
-SHARD_COUNT 		  = 2
+SHARD_COUNT 		  = 3
 bot_intents 		  = Intents.all()
 bot_intents.presences = False
 
@@ -50,7 +49,7 @@ bot = commands.AutoShardedBot(
 	intents = bot_intents,
 	case_insensitive = True,
 	shard_count = SHARD_COUNT,
-	shard_ids = [0, 1]
+	shard_ids = [0, 1, 2]
 )
 
 
@@ -70,21 +69,17 @@ async def update_presence() -> None:
 
 @bot.event
 async def on_ready() -> None:
+	postgres_manager = container_instance.get_postgres_manager()
+	await postgres_manager.init_if_not_exists()
+	
 	await __setup_cogs()
+	await bot.tree.sync()
 	bot.add_view(view = ReplyWidget(bot = bot))
 
-	sqlite_manager = SQLiteManager("database/database.db")
-	await sqlite_manager.init_if_not_exists()
-	await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
+	await GiveawayTimer(TimerData(
+		bot = bot, postgres_manager = postgres_manager
+	)).load_active_gws()
 
 	await update_presence.start()
 
-async def main() -> None:
-	async with bot:
-		await bot.start(token = BOT_TOKEN)
-
-try:
-	run(main())
-
-except KeyboardInterrupt:
-	print("\nCanceled.")
+bot.run(token = BOT_TOKEN)
