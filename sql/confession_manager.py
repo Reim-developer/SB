@@ -17,10 +17,10 @@ class ConfessionManager:
 			async with self.pool.connection() as connect:
 				await connect.execute(
 					"""
-						INSERT INTO guild_configs (guild_id, confession_channel)
+						INSERT INTO guild_configs (guild_id, confession_channel_id)
 						VALUES (%s, %s)
 						ON CONFLICT (guild_id)
-						DO UPDATE SET confession_channel = EXCLUDED.confession_channel
+						DO UPDATE SET confession_channel_id = EXCLUDED.confession_channel_id
 					""", (guild_id, channel_id))
 				
 				await connect.commit()
@@ -37,7 +37,7 @@ class ConfessionManager:
 		try:
 			async with self.pool.connection() as connect:
 				row = await connect.execute((
-					"SELECT confession_channel FROM guild_configs WHERE guild_id = %s"
+					"SELECT confession_channel_id FROM guild_configs WHERE guild_id = %s"
 				), (guild_id,))
 				result = await row.fetchone()
 
