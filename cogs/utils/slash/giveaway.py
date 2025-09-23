@@ -9,10 +9,11 @@ from core_utils.time_utils import TimeUtils
 from datetime import datetime
 from time import time
 from asyncio import sleep
-from sql.sql_manager import SQLiteManager
 from core_utils.giveaway_timer import (
 	GiveawayData, GiveawayTimer, TimerData
 )
+from sql.giveaway_manager import GiveawayManager, GwsManagerData
+from core_utils.container import container_instance
 from core_utils.type_alias import CanSendMessageChannel
 from core_utils.url import URLUtils
 
@@ -30,10 +31,13 @@ class _GiveawayData:
 class GiveawaysSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
-		self.sqlite_manager = SQLiteManager("database/database.db")
-		self.__giveaway_timer = GiveawayTimer(TimerData(
+		self.__postgres_manager = container_instance.get_postgres_manager()
+
+		assert self.__postgres_manager.pool is not None
+		self.__giveaway_manager = GiveawayManager(self.__postgres_manager.pool)
+		self.__giveaway_timer   = GiveawayTimer(TimerData(
 			bot = self.bot,
-			sqlite_manager = self.sqlite_manager
+			postgres_manager = self.__postgres_manager
 		))
 
 	def __invalid_time(self, wrong_time: str) -> Embed:
@@ -177,10 +181,13 @@ class GiveawaysSlash(commands.Cog):
 				await message.add_reaction("🎉")
 				await sleep(0.5)
 
-				await self.sqlite_manager.set_giveaway(
-					channel_id =  current_channel.id,
-					giveaway_id = giveaway_id, 
-					time = time_end_at
+				await self.__giveaway_manager.set_giveaway(
+					gws_data = GwsManagerData(
+						guild_id = interaction.guild.id,
+						channel_id = current_channel.id,
+						message_id = giveaway_id,
+						end_at = time_end_at
+					)
 				)
 
 				giveaway_data = GiveawayData(
