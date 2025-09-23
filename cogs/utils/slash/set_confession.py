@@ -2,13 +2,17 @@ from discord import (
 	app_commands, Interaction, TextChannel, Embed
 )
 from discord.ext import commands
-from sql.sql_manager import SQLiteManager
+from core_utils.container import container_instance
+from sql.confession_manager import ConfessionManager
 from datetime import datetime
 
 class SetConfessionSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
-		self.sqlite_manager =  SQLiteManager("database/database.db")
+		self.__pool = container_instance.get_postgres_manager().pool
+		assert self.__pool is not None
+		self.__confession_manager = ConfessionManager(self.__pool)
+
 
 	def __embed(self, channel: TextChannel) -> Embed:
 		embed = Embed(
@@ -41,7 +45,7 @@ class SetConfessionSlash(commands.Cog):
 		if not guild:
 			return
 		
-		await self.sqlite_manager.set_confession_channel(
+		await self.__confession_manager.set_confession_channel(
 			guild_id = guild.id, channel_id = channel.id
 		)
 

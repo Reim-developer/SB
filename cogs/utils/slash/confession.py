@@ -5,6 +5,8 @@ from discord import (
 )
 from discord.ext import commands
 from sql.sql_manager import SQLiteManager
+from core_utils.container import container_instance
+from sql.confession_manager import ConfessionManager
 from datetime import datetime
 from asyncio import sleep
 from datetime import datetime
@@ -15,6 +17,10 @@ class ConfessionSlash(commands.Cog):
 		self.bot = bot
 		self.sqlite_manager = SQLiteManager("database/database.db")
 		self.LOG_CHANNEL = 1057274847459295252
+
+		self.__pool = container_instance.get_postgres_manager().pool
+		assert self.__pool is not None
+		self.__confession_manager = ConfessionManager(self.__pool)
 
 	def __not_set_embed(self) -> Embed:
 		embed = Embed(
@@ -130,7 +136,9 @@ class ConfessionSlash(commands.Cog):
 			return
 		
 		await interaction.response.defer(ephemeral = True)
-		channel_id = await self.sqlite_manager.confession_channel(guild_id = guild.id)
+		channel_id = await self.__confession_manager.get_confession_channel(
+			guild_id = guild.id
+		)
 		
 		if not channel_id:
 			await interaction.followup.send(embed = self.__not_set_embed())
