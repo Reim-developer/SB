@@ -1,8 +1,8 @@
-# from typing import Optional
+from typing import Optional
 from psycopg_pool import AsyncConnectionPool
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
-from core_utils import Log
+from core_utils.logging import Log
 
 _ACP = AsyncConnectionPool[AsyncConnection[TupleRow]]
 
@@ -27,7 +27,25 @@ class ConfessionManager:
 
 		except Exception as error:
 			Log.critical(
-				f"Could not set confession channel "
-				f"in guild: {guild_id} with error: {error}"
+				"Could not set confession channel "
+				f"in guild: {guild_id}\n"
+				f"with error: {error}"
 			)
 			
+
+	async def get_confession_channel(self, guild_id: int) -> Optional[int]:
+		try:
+			async with self.pool.connection() as connect:
+				row = await connect.execute((
+					"SELECT confession_channel FROM guild_configs WHERE guild_id = %s"
+				), (guild_id,))
+				result = await row.fetchone()
+
+				return result[0] if result else None
+			
+		except Exception as error:
+			Log.critical(
+				"Could not get confession channel "
+				f"in guild: {guild_id}\n"
+				f"With error: {error}"
+			)
