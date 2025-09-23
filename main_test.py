@@ -1,11 +1,10 @@
 from json import load 
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
-# from sql.sql_manager import SQLiteManager
 from core_utils.logging import Log
 from core_utils.container import container_instance
 from widgets.confession_widget import ReplyWidget
-# from core_utils.giveaway_timer import GiveawayTimer, TimerData
+from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
 with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -76,9 +75,9 @@ async def on_ready() -> None:
 	await bot.tree.sync()
 	bot.add_view(view = ReplyWidget(bot = bot))
 
-	# sqlite_manager = SQLiteManager("database/database.db")
-	# await sqlite_manager.init_if_not_exists()
-	# await GiveawayTimer(TimerData(bot = bot, sqlite_manager = sqlite_manager)).load_active_gws()
+	await GiveawayTimer(TimerData(
+		bot = bot, postgres_manager = postgres_manager
+	)).load_active_gws()
 
 	await update_presence.start()
 	
