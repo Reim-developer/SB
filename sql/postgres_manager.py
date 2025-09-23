@@ -83,8 +83,8 @@ class PostgresManager:
 				await connect.execute(SQL(
 					"""--sql
 						CREATE TABLE IF NOT EXISTS {} (
-							guild_id 		   BIGINT PRIMARY KEY,
-							confession_channel BIGINT
+							guild_id 		   	  BIGINT PRIMARY KEY,
+							confession_channel_id BIGINT
 						);
 				   	""").format(Identifier(_GUILD_CONFIGS)))
 				
