@@ -1,14 +1,18 @@
 from typing import Optional
 from discord import TextChannel, User, Embed
 from discord.ext import commands
-from sql.sql_manager import SQLiteManager
+from core_utils.container import container_instance
+from sql.blacklist_manager import BlacklistManager, BlacklistResult
 from datetime import datetime
 from json_helper import prefix
 
 class UnBlackListPrefix(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
-		self.sqlite_manager = SQLiteManager("database/database.db")
+		self.__pool = container_instance.get_postgres_manager().pool
+
+		assert self.__pool is not None
+		self.__blacklist_manager = BlacklistManager(self.__pool)
 		self.LOG_CHANNEL = self.bot.get_channel(1057274847459295252)
 
 	def __missing_args_embed(
@@ -82,12 +86,13 @@ class UnBlackListPrefix(commands.Cog):
 		blacklist_user = self.bot.get_user(user.id)
 		
 		if blacklist_user:
-			is_already_blacklist = await self.sqlite_manager.blacklist_user(user_id = user.id)
-			if not is_already_blacklist:
+			is_already_blacklist = await self.__blacklist_manager.is_blacklisted(user_id = user.id)
+
+			if is_already_blacklist == BlacklistResult.NOT_BLACKLISTED:
 				await ctx.channel.send(embed = self.__not_in_blacklist(user = blacklist_user))
 				return
 
-			await self.sqlite_manager.remove_blacklist_user(user_id = blacklist_user.id)
+			await self.__blacklist_manager.remove_blacklist_user(user_id = blacklist_user.id)
 			await ctx.channel.send(embed = self.__success_embed(user = user, reason = reason))
 
 			if self.LOG_CHANNEL and isinstance(self.LOG_CHANNEL, TextChannel):
