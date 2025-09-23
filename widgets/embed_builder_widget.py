@@ -60,6 +60,20 @@ class _BuilderOptionsData:
 	message: WebhookMessage
 	bot: commands.Bot
 
+# class _ImageBuilderOptions(Modal):
+# 	def __init__(self) -> None: 
+# 		super().__init__(title = "Edit Embed Image")
+
+# 	image_build: _T_INPUT[Self] = TextInput(
+# 		label 	   = "Embed Image URL",
+# 		style 	   = _T_S.short,
+# 		max_length = 256,
+# 		required   = False
+# 	)
+
+# 	def embed_image_url(self, image_data: ImageData) -> ImageData:
+# 		return image_data
+	
 class _BuilderOptions(View):
 	_b = button
 	_B_S = ButtonStyle
@@ -76,11 +90,11 @@ class _BuilderOptions(View):
 		self.image_data = image_data
 
 	@_b(
-		label = "Edit Embed",
+		label = "Edit Embed Content",
 		emoji = "<:edit:1413072289280299120>",
 		style = _B_S.gray
 	)
-	async def on_edit(
+	async def on_content_edit(
 			self, interaction: Interaction,
 			_: Button[Self]) -> None:
 		await interaction.response.send_modal(
@@ -88,6 +102,16 @@ class _BuilderOptions(View):
 			.set_default_modal(self.embed_data)
 		)
 		await self.message.delete()
+
+	@_b(
+		label = "Edit Embed Image",
+		emoji = "<:edit:1413072289280299120>",
+		style = _B_S.gray
+	)
+	async def on_image_edit(
+			self, interacction: Interaction,
+			_: Button[Self]) -> None: ...
+		
 
 	@_b(
 		label = "Send Embed",
