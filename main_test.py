@@ -69,12 +69,12 @@ async def update_presence() -> None:
 
 @bot.event
 async def on_ready() -> None:
+	postgres_manager = container_instance.get_postgres_manager()
+	await postgres_manager.init_if_not_exists()
+	
 	await __setup_cogs()
 	await bot.tree.sync()
 	bot.add_view(view = ReplyWidget(bot = bot))
-
-	postgres_manager = container_instance.get_postgres_manager()
-	await postgres_manager.init_if_not_exists()
 
 	# sqlite_manager = SQLiteManager("database/database.db")
 	# await sqlite_manager.init_if_not_exists()
