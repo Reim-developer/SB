@@ -9,10 +9,12 @@ from typing import Self
 from datetime import datetime
 from asyncio import sleep
 from discord.ext import commands
-from sql.sql_manager import SQLiteManager
+from core_utils.container import container_instance
+from sql.blacklist_manager import BlacklistManager, BlacklistResult
 
 Bot = commands.AutoShardedBot | commands.Bot
 Author = User | Member
+
 
 class ReplyAnonymousWidget(Modal):
 	reply_content: TextInput[Self] = TextInput(
@@ -171,8 +173,11 @@ class ReplyWidget(View):
 	def __init__(self, bot: Bot) -> None:
 		super().__init__(timeout = None)
 		self.bot = bot
-		self.sqlite_manager = SQLiteManager("database/database.db")
 
+		self.__pool = container_instance.get_postgres_manager().pool
+		assert self.__pool is not None
+		self.__blacklist_manager = BlacklistManager(self.__pool)
+		
 	__ANONYMOUS_BUTTON_ID: str = "ANONYMOUS_BUTTON_ID"
 	__PUBLIC_BUTTON_ID: str = "PUBLIC_BUTTON_ID"
 	__REPORT_BUTTON_ID: str = "REPORT-BUTTON_ID"
@@ -187,15 +192,15 @@ class ReplyWidget(View):
 			_: Button[Self]) -> None:
 		
 		user = interaction.user
-		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+		is_blacklist = self.__blacklist_manager.is_blacklisted(user.id)
 
-		if await is_blacklist:
+		if await is_blacklist == BlacklistResult.BLACKLISTED:
 			await interaction.response.send_message(
 				content = (
 					f"Hello, {interaction.user.name}\n" \
 					"Sorry but you have been blacklisted, details " \
 					"please join our support server to appeal\n" \
-					"https://discord.gg/QknaXEh7"
+					"https://discord.gg/S9Z4uUmXbA"
 				),
 				ephemeral = True
 			)
@@ -213,7 +218,7 @@ class ReplyWidget(View):
 			_: Button[Self]) -> None:
 		
 		user = interaction.user
-		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+		is_blacklist = self.__blacklist_manager.is_blacklisted(user.id)
 
 		if await is_blacklist:
 			await interaction.response.send_message(
@@ -221,7 +226,7 @@ class ReplyWidget(View):
 					f"Hello, {interaction.user.name}\n" \
 					"Sorry but you have been blacklisted, details " \
 					"please join our support server to appeal\n" \
-					"https://discord.gg/QknaXEh7"
+					"https://discord.gg/S9Z4uUmXbA"
 				),
 				ephemeral = True
 			)
