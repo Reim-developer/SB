@@ -18,7 +18,12 @@ class _DiscordGuildAssets:
 	banner_url: Optional[str]
 
 @dataclass
+class _Bot:
+	context: commands.Context[commands.Bot]
+
+@dataclass
 class _DiscordGuild:
+	bot:				_Bot
 	name: 	   	 		str
 	id: 	   	 		int
 	owner_id:  	 		Optional[int]
@@ -27,12 +32,15 @@ class _DiscordGuild:
 	vanity_url:  		Optional[str]
 	created_at:  		datetime
 	verification_level: int
-	guild_assets: 		_DiscordGuildAssets
 	role_count: 		int
+	guild_assets: 		_DiscordGuildAssets
 
-def _impl_discord_guild(guild: Guild) -> _DiscordGuild:
+def _impl_discord_guild(
+		guild: Guild,
+		bot: _Bot) -> _DiscordGuild:
 
 	return _DiscordGuild(
+		bot 			   = bot,
 		name 	 		   = guild.name,
 		id 	 	 		   = guild.id,
 		owner_id 		   = guild.owner_id,
@@ -41,11 +49,11 @@ def _impl_discord_guild(guild: Guild) -> _DiscordGuild:
 		vanity_url 		   = guild.vanity_url,
 		created_at 		   = guild.created_at,
 		verification_level = guild.verification_level.value,
+		role_count 	   	   = len(guild.roles),
 		guild_assets 	   = _DiscordGuildAssets(
-			icon_url   = guild.icon.url if guild.icon else None,
-			banner_url = guild.banner.url if guild.banner else None
+			icon_url   	   = guild.icon.url if guild.icon else None,
+			banner_url     = guild.banner.url if guild.banner else None
 		),
-		role_count 	   = len(guild.roles)
 	)
 
 class ServerInfoPrefix(commands.Cog):
@@ -83,7 +91,8 @@ class ServerInfoPrefix(commands.Cog):
 						else '`No any roles`'
 					)}"
 				),
-				color 	    = 0xeeffc7
+				color 	    = 0xeeffc7,
+				timestamp	= datetime.now()
 			)
 			.set_thumbnail(
 				url = (
@@ -99,6 +108,9 @@ class ServerInfoPrefix(commands.Cog):
 					if data.guild_assets.banner_url else None
 				)
 			)
+			.set_footer(text = (
+				f"Requested by: {data.bot.context.author}"
+			))
 		)
 
 	@commands.command(aliases = ["si", "sv", "server"])
@@ -113,7 +125,10 @@ class ServerInfoPrefix(commands.Cog):
 			)
 			return
 
-		data = _impl_discord_guild(guild = ctx.guild)
+		data = _impl_discord_guild(
+			guild = ctx.guild,
+			bot   = _Bot(context = ctx)
+		)
 		await ctx.channel.send(
 			embed = self.__information_embed(data = data),
 			view  = self._D_G_W(
