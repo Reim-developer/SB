@@ -4,9 +4,9 @@ from discord import (
 	TextChannel, 
 )
 from discord.ext import commands
-from sql.sql_manager import SQLiteManager
 from core_utils.container import container_instance
 from sql.confession_manager import ConfessionManager
+from sql.blacklist_manager import BlacklistManager, BlacklistResult
 from datetime import datetime
 from asyncio import sleep
 from datetime import datetime
@@ -15,12 +15,12 @@ from widgets.confession_widget import ReplyWidget
 class ConfessionSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
-		self.sqlite_manager = SQLiteManager("database/database.db")
 		self.LOG_CHANNEL = 1057274847459295252
 
 		self.__pool = container_instance.get_postgres_manager().pool
 		assert self.__pool is not None
 		self.__confession_manager = ConfessionManager(self.__pool)
+		self.__blacklist_manager  = BlacklistManager(self.__pool)
 
 	def __not_set_embed(self) -> Embed:
 		embed = Embed(
@@ -121,15 +121,15 @@ class ConfessionSlash(commands.Cog):
 			return
 		
 		user = interaction.user
-		is_blacklist = self.sqlite_manager.blacklist_user(user.id)
+		is_blacklist = self.__blacklist_manager.is_blacklisted(user.id)
 
-		if await is_blacklist:
+		if await is_blacklist == BlacklistResult.BLACKLISTED:
 			await interaction.response.send_message(
 				content = (
 					f"Hello, {interaction.user.name}\n" \
 					"Sorry but you have been blacklisted, details " \
 					"please join our support server to appeal\n" \
-					"https://discord.gg/QknaXEh7"
+					"https://discord.gg/S9Z4uUmXbA"
 				),
 				ephemeral = True
 			)
@@ -179,15 +179,11 @@ class ConfessionSlash(commands.Cog):
 			if LOG_CHANNEL and isinstance(LOG_CHANNEL, TextChannel):
 				time_now = int(datetime.now().timestamp())
 
-				try:
-					await LOG_CHANNEL.send(content = (
-						f"* Message content: {message}\n" \
-						f"* Author ID: `{interaction.user.id}`\n" \
-						f"* Time: <t:{time_now}:R>"
-					))
+				await LOG_CHANNEL.send(content = (
+					f"* Message content: {message}\n" \
+					f"* Author ID: `{interaction.user.id}`\n" \
+					f"* Time: <t:{time_now}:R>"
+				))
 				
-				except Exception as e:
-					print(e)
-
 async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(ConfessionSlash(bot = bot))
