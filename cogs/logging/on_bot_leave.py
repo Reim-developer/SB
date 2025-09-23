@@ -1,31 +1,26 @@
-from typing import LiteralString
 from discord.ext import commands
 from discord.guild import Guild
 from core_utils.type_alias import (
 	CanSendMessageChannel, DisableAllMentions
 )
-from sql.sql_manager import SQLiteManager
+from core_utils.container import container_instance
 
-_LTS = LiteralString
 _CSMC 			  = CanSendMessageChannel
-_SQL 		 	  = SQLiteManager
-_DB: _LTS 		  = "database/database.db"
 _DAM 			  =  DisableAllMentions
-_SB_TABLE_NAME: _LTS = "sb_bot"
 
 class OnBotLeaveLogging(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
 		self.LOG_CHANNEL = self.bot.get_channel(1410300232348078093)
-		self.__sql_manager = _SQL(_DB)
+		self.__pool = container_instance.get_postgres_manager().pool
 
 	async def __clear_data(self, guild_id: int) -> None:
-		await self.__sql_manager.exec(
-			query = 
-				f"""--sql
-					DELETE FROM {_SB_TABLE_NAME} WHERE guild_id = ?
-				""", parameters = (guild_id,)
-		)
+		assert self.__pool is not None
+
+		async with self.__pool.connection() as connection:
+			await connection.execute(
+				"DELETE FROM guild_configs WHERE guild_id = %s",
+			(guild_id,))
 
 	@commands.Cog.listener()
 	async def on_guild_remove(self, guild: Guild) -> None:
