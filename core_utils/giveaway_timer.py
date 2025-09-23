@@ -5,7 +5,7 @@ from discord import (
 )
 from discord.ui import View, Button
 from discord.ext import commands
-from sql import SQLiteManager
+from sql.postgres_manager import PostgresManager
 from asyncio import Task, create_task, sleep
 from time import time
 from random import choice
@@ -24,7 +24,7 @@ class JumpToWidget(View):
 @dataclass
 class TimerData:
 	bot: commands.Bot | commands.AutoShardedBot
-	sqlite_manager: SQLiteManager
+	postgres_manager: PostgresManager
 
 @dataclass
 class GiveawayData:
@@ -35,7 +35,7 @@ class GiveawayData:
 class GiveawayTimer:
 	def __init__(self, timer_data: TimerData) -> None:
 		self.__bot = timer_data.bot
-		self.__sqlite_manager = timer_data.sqlite_manager
+		self.__postgre_manager = timer_data.postgres_manager
 		self.__active: Dict[int, Task[None]] = {}
 		self.__closed = False
 
@@ -118,10 +118,15 @@ class GiveawayTimer:
 			await self.__cleanup(message_id = gws_data.message_id)
 
 	async def load_active_gws(self) -> None:
-		rows = await self.__sqlite_manager.fetch(
-			"""--sql
-				SELECT message_id, channel_id, end_at FROM giveaways
-			""", ())
+		assert self.__postgre_manager.pool is not None
+
+		async with self.__postgre_manager.pool.connection() as connect:
+			cursor = await connect.execute(
+				"""--sql
+					SELECT message_id, channel_id, end_at FROM giveaways
+				""", ())
+			
+			rows = await cursor.fetchall()
 		
 		now = int(time())
 
@@ -140,10 +145,13 @@ class GiveawayTimer:
 				await self.start(gws_data = gws_data)
 
 	async def __cleanup(self, message_id: int) -> None:
-		await self.__sqlite_manager.exec(
-			"DELETE FROM giveaways WHERE message_id = ?",
-			(str(message_id),)
-		)
+		assert self.__postgre_manager.pool is not None
+		
+		async with self.__postgre_manager.pool.connection() as connect:
+			await connect.execute(
+				"DELETE FROM giveaways WHERE message_id = %s",
+				(message_id,)
+			)
 
 	async def start(self, gws_data: GiveawayData) -> None:
 		if self.__closed:
