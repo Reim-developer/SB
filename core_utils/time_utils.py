@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime
-from re import findall
+from re import findall, fullmatch
 
 _ONE_MINUTE = 60
 _ONE_HOUR = 60 * _ONE_MINUTE
@@ -15,7 +15,11 @@ class TimeUtils:
 
 	@staticmethod
 	def parse(time_str: str) -> Optional[int]:
+		TIME_PATTERN = r"(?:\d+[ywdhms])+"
 		time_str = time_str.strip().lower()
+
+		if not time_str or not  fullmatch(TIME_PATTERN, time_str):
+			return None
 
 		pattern = r"(\d+)([ywdhms])"
 		matches = findall(pattern = pattern, string = time_str)
