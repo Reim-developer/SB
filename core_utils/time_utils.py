@@ -33,10 +33,10 @@ class TimeUtils:
 			
 			match unit:
 				case "y":
-					total_seconds += value * _ONE_YEAR * _ONE_DAY * _ONE_HOUR
+					total_seconds += value * _ONE_YEAR
 
 				case "w":
-					total_seconds += value * _ONE_WEEK * _ONE_DAY * _ONE_HOUR
+					total_seconds += value * _ONE_WEEK
 
 				case "d":
 					total_seconds += value * _ONE_DAY
