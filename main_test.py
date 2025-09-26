@@ -30,6 +30,10 @@ async def __setup_cogs() -> None:
 		"cogs.utils.slash.giveaway",
 		"cogs.utils.slash.giveaway_reroll",
 		"cogs.utils.slash.embed_builder",
+		"cogs.utils.slash.donation_log",
+		"cogs.utils.slash.donation_unit",
+		"cogs.utils.slash.donation_add",
+		"cogs.utils.slash.donation_get",
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
 		"cogs.owner.prefix.sync_slash",
@@ -45,12 +49,13 @@ async def __setup_cogs() -> None:
 			print(f"Could not load cog: {cog} with error: {error}")
 
 bot = commands.AutoShardedBot(
-	command_prefix = BOT_PREFIX, 
-	help_command = None, 
-	intents = bot_intents,
-	case_insensitive = True,
-	shard_count = SHARD_COUNT,
-	shard_ids = [0, 1],
+	command_prefix 	   = BOT_PREFIX, 
+	help_command 	   = None, 
+	intents 		   = bot_intents,
+	case_insensitive   = True,
+	strip_after_prefix = True,
+	shard_count 	   = SHARD_COUNT,
+	shard_ids 		   = [0, 1],
 )
 
 @tasks.loop(minutes = 5)
