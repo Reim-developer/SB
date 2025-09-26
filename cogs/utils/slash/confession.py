@@ -1,3 +1,4 @@
+from typing import Optional
 from discord.abc import GuildChannel
 from discord import (
 	Interaction, app_commands, Embed, Guild,
@@ -11,8 +12,11 @@ from datetime import datetime
 from asyncio import sleep
 from datetime import datetime
 from widgets.confession_widget import ReplyWidget
+from core_utils.url import URLUtils
 
 class ConfessionSlash(commands.Cog):
+	_MAX_IMAGE_URL_LENGTH = 250
+
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot = bot
 		self.LOG_CHANNEL = 1057274847459295252
@@ -90,7 +94,7 @@ class ConfessionSlash(commands.Cog):
 
 		return False
 	
-	def __confession_embed(self, msg: str) -> Embed:
+	def __confession_embed(self, msg: str, image_url: Optional[str]) -> Embed:
 		embed = Embed(
 			title = f"Anonymous Confession",
 			description = (
@@ -104,6 +108,9 @@ class ConfessionSlash(commands.Cog):
 			if self.bot.user and self.bot.user.avatar
 			else None
 		)
+		embed.set_image(
+			url = image_url if image_url else None
+		)
 
 		return embed
 
@@ -111,11 +118,14 @@ class ConfessionSlash(commands.Cog):
 		name = "confession", 
 		description = "Send confession to confession channel"
 	)
-	@app_commands.describe(message = "The message you want to send")
+	@app_commands.describe(
+		message   = "The message you want to send",
+		image_url = "Your image URL (Optional)"
+	)
 	@app_commands.checks.cooldown(1, 15, key = lambda i: i.user.id)
 	async def confession(
 			self, interaction: Interaction, 
-			message: str) -> None:
+			message: str, image_url: Optional[str] = None) -> None:
 		guild = interaction.guild
 		if not guild:
 			return
@@ -158,13 +168,30 @@ class ConfessionSlash(commands.Cog):
 			await interaction.followup.send(embed = self.__missing_permissions_embed())
 			return
 		
+		if image_url and not URLUtils.valid_url(url = image_url):
+			await interaction.followup.send(
+				f"* Image URL: `{image_url}` is not valid, please try again",
+				ephemeral = True
+			)
+			return
+		
+		if image_url and len(image_url) >= self._MAX_IMAGE_URL_LENGTH:
+			await interaction.followup.send(
+				f"* Max length of image URL is: `{self._MAX_IMAGE_URL_LENGTH}` "
+				"characters, please try again",
+				ephemeral = True
+			)
+			return
+		
 		await interaction.followup.send(content = (
 			f"Successfully send your confession to: {guild_channel.mention}"
 		))
 
 		if isinstance(guild_channel, TextChannel):
 			msg = await guild_channel.send(
-				embed = self.__confession_embed(msg = message),
+				embed = self.__confession_embed(
+					msg = message, image_url = image_url
+				),
 				view = ReplyWidget(self.bot)
 			)
 			await msg.create_thread(
@@ -180,8 +207,11 @@ class ConfessionSlash(commands.Cog):
 				time_now = int(datetime.now().timestamp())
 
 				await LOG_CHANNEL.send(content = (
-					f"* Message content: {message}\n" \
-					f"* Author ID: `{interaction.user.id}`\n" \
+					f"* Message content: {message}\n"
+					f"* Image URL: {(
+						image_url if image_url else 'No Image'
+					)}\n"
+					f"* Author ID: `{interaction.user.id}`\n"
 					f"* Time: <t:{time_now}:R>"
 				))
 				
