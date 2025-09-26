@@ -1,18 +1,23 @@
 from typing import Optional
+from datetime import datetime
 from re import findall
 
-_ONE_YEAR = 365
-_ONE_WEEK = 7
-_ONE_DAY = 24
-_ONE_HOUR = 3600
 _ONE_MINUTE = 60
+_ONE_HOUR = 60 * _ONE_MINUTE
+_ONE_DAY = 24 * _ONE_HOUR
+_ONE_WEEK = 7 * _ONE_DAY
+_ONE_YEAR = 365 * _ONE_DAY
 
 class TimeUtils:
+	@staticmethod
+	def unix_time() -> int:
+		return int(datetime.now().timestamp())
+
 	@staticmethod
 	def parse(time_str: str) -> Optional[int]:
 		time_str = time_str.strip().lower()
 
-		pattern = r"(\d+)([wdhms])"
+		pattern = r"(\d+)([ywdhms])"
 		matches = findall(pattern = pattern, string = time_str)
 
 		if not matches:
