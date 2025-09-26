@@ -5,18 +5,20 @@ from discord import (
 	ButtonStyle, Interaction, TextStyle, Embed, TextChannel,
 	User, Member
 )
-from typing import Self
+from typing import Optional, Self
 from datetime import datetime
 from asyncio import sleep
 from discord.ext import commands
 from core_utils.container import container_instance
+from core_utils.url import URLUtils
 from sql.blacklist_manager import BlacklistManager, BlacklistResult
+from core_utils.type_alias import DisableAllMentions
 
 Bot = commands.AutoShardedBot | commands.Bot
 Author = User | Member
 
-
 class ReplyAnonymousWidget(Modal):
+	_DAM 						   = DisableAllMentions
 	reply_content: TextInput[Self] = TextInput(
 		label = "Reply Confession (Anonymous)",
 		placeholder = "Submit your reply content (Anonymous)",
@@ -25,6 +27,13 @@ class ReplyAnonymousWidget(Modal):
 		min_length = 1,
 		max_length = 3500
 	)
+	image_url: TextInput[Self] = TextInput(
+		label 		= "Image URL (Optional)",
+		placeholder = "Submit Image URL...",
+		style 	    = TextStyle.short,
+		required    = False,
+		max_length  = 250
+	)
 
 	def __init__(self, bot: Bot) -> None:
 		super().__init__(title = "Anonymous Reply Confession")
@@ -32,12 +41,15 @@ class ReplyAnonymousWidget(Modal):
 		self.bot = bot
 		self.LOG_CHANNEL = self.bot.get_channel(1057274847459295252)
 
-	def __reply_embed(self, content: str) -> Embed:
-		embed = Embed(
-			title = "Anonymous Reply Confession",
-			description = content,
-			color = 0xbed0f7,
-			timestamp = datetime.now()
+	def __reply_embed(self, content: str, image_url: Optional[str]) -> Embed:
+		embed = (Embed(
+				title = "Anonymous Reply Confession",
+				description = content,
+				color = 0xbed0f7,
+				timestamp = datetime.now()
+			).set_image(
+				url = image_url if image_url else None
+			)
 		)
 
 		return embed
@@ -49,17 +61,35 @@ class ReplyAnonymousWidget(Modal):
 		
 		await log_channel.send(
 			content = (
-				f"* Message Content: {message}\n" \
-				f"* Author ID: `{author.id}`\n" \
+				f"* Message Content: {message}\n"
+				f"* Message Image URL: {(
+					self.image_url 
+					if self.image_url else 'No Image'
+				)}\n" 
+				f"* Author ID: `{author.id}`\n"
 				f"* Time: <t:{time_now}:R>"
-			)
+			),
+			allowed_mentions = self._DAM
 		)
 
 	async def on_submit(self, interaction: Interaction) -> None:
-		content = self.reply_content.value
+		content   = self.reply_content.value
+		image_url = self.image_url.value
+
+		if image_url and not URLUtils.valid_url(image_url):
+			await interaction.response.send_message(
+				content = (
+					f"* Your image URL: `{image_url}` is not valid "
+					"please try again"
+				)
+			)
+			return 
 
 		await interaction.response.send_message(
-			embed = self.__reply_embed(content = content),
+			embed = self.__reply_embed(
+				content   = content,
+				image_url = image_url
+			),
 			view = ReplyWidget(self.bot)
 		)
 		message = await interaction.original_response()
@@ -88,19 +118,31 @@ class PublicWidget(Modal):
 		min_length = 1,
 		max_length = 3500
 	)
+	image_url: TextInput[Self] = TextInput(
+		label 		= "Image URL (Optional)",
+		placeholder = "Submit Image URL...",
+		style 	    = TextStyle.short,
+		required    = False,
+		max_length  = 250
+	)
 
 	def __init__(self, bot: Bot) -> None:
 		super().__init__(title = "Public Reply Confession")
 		self.reply_content.callback = self.on_submit
 		self.bot = bot
 
-	def __reply_embed(self, content: str, interaction: Interaction) -> Embed:
+	def __reply_embed(self, 
+				   content: str, image_url: Optional[str],
+				   interaction: Interaction) -> Embed:
 		author = interaction.user
-		embed = Embed(
-			title = "Public Reply Confession",
-			description = content,
-			color = 0xfaafaa,
-			timestamp = datetime.now()
+		embed = (Embed(
+				title = "Public Reply Confession",
+				description = content,
+				color = 0xfaafaa,
+				timestamp = datetime.now()
+			).set_image(
+				url = image_url if image_url else None
+			)
 		)
 		embed.set_footer(text = f"Reply by: {author.name}")
 		embed.set_thumbnail(url = author.avatar.url if author.avatar else None)
@@ -109,10 +151,22 @@ class PublicWidget(Modal):
 
 	async def on_submit(self, interaction: Interaction) -> None:
 		content = self.reply_content.value
+		image_url = self.image_url.value
+
+		if image_url and not URLUtils.valid_url(image_url):
+			await interaction.response.send_message(
+				content = (
+					f"* Your image URL: `{image_url}` is not valid "
+					"please try again"
+				)
+			)
+			return 
+
 
 		await interaction.response.send_message(
 			embed = self.__reply_embed(
-				content = content, 
+				content 	= content, 
+				image_url 	= image_url,
 				interaction = interaction
 			),
 			view = ReplyWidget(bot = self.bot)
@@ -220,7 +274,7 @@ class ReplyWidget(View):
 		user = interaction.user
 		is_blacklist = self.__blacklist_manager.is_blacklisted(user.id)
 
-		if await is_blacklist:
+		if await is_blacklist == BlacklistResult.BLACKLISTED:
 			await interaction.response.send_message(
 				content = (
 					f"Hello, {interaction.user.name}\n" \
