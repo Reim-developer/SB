@@ -8,17 +8,23 @@ from core_utils.config import ConfigUtils
 from core_utils.logging import StatusCode, Log
 from urllib.parse import quote_plus
 
-_ACP 		     = AsyncConnectionPool[AsyncConnection[TupleRow]]
-_MAX_TIMEOUT     = 30
-_BLACKLIST 		 = "blacklist"
-_GIVEAWAYS		 = "giveaways"
-_GUILD_CONFIGS   = "guild_configs" 
+_ACP 		       = AsyncConnectionPool[AsyncConnection[TupleRow]]
+_MAX_TIMEOUT       = 30
+_BLACKLIST 		   = "blacklist"
+_GIVEAWAYS		   = "giveaways"
+_GUILD_CONFIGS     = "guild_configs" 
+_DONATION_SETTINGS = "donation_settings"
+_DONATION_LOGS     = "donation_logs"
+_DONATION_TIERS    = "donation_tiers"
 
 class PostgresManager:
 	def __init__(self) -> None:
 		self.config = ConfigUtils.database_config()
 		self.pool: Optional[_ACP] = None
-		self.TABLES = [_BLACKLIST, _GIVEAWAYS, _GUILD_CONFIGS]
+		self.TABLES = [
+			_BLACKLIST, _GIVEAWAYS, _GUILD_CONFIGS, 
+			_DONATION_LOGS, _DONATION_SETTINGS, _DONATION_TIERS
+		]
 
 	async def __aenter__(self) -> Self:
 		await self.initialize()
@@ -111,6 +117,59 @@ class PostgresManager:
 						Identifier(_GIVEAWAYS), 
 						Identifier(_GUILD_CONFIGS)
 					))
+				
+				await connect.execute(SQL(
+					"""
+						CREATE TABLE IF NOT EXISTS {} (
+							guild_id BIGINT PRIMARY KEY REFERENCES {} (guild_id) ON DELETE CASCADE,
+							log_channel_id BIGINT,
+							money_unit     TEXT NOT NULL DEFAULT 'credits'
+					);"""
+				).format(
+					Identifier(_DONATION_SETTINGS),
+					Identifier(_GUILD_CONFIGS)
+				))
+
+				await connect.execute(SQL(
+					"""
+						CREATE TABLE IF NOT EXISTS {} (
+							id 		   BIGSERIAL PRIMARY KEY,
+							guild_id   BIGINT NOT NULL REFERENCES {} (guild_id) ON DELETE CASCADE,
+							user_id	   BIGINT NOT NULL,
+							amount     NUMERIC(18, 4) NOT NULL CHECK (amount > 0),
+							donated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+						);
+					"""
+				).format(
+					Identifier(_DONATION_LOGS),
+					Identifier(_DONATION_SETTINGS)
+				))
+
+				await connect.execute(SQL(
+					"""
+						CREATE TABLE IF NOT EXISTS {} (
+							id         BIGSERIAL PRIMARY KEY,
+							guild_id   BIGINT NOT NULL REFERENCES {} (guild_id) ON DELETE CASCADE,
+							min_amount NUMERIC(18, 4) NOT NULL CHECK (min_amount > 0),
+							role_id    BIGINT NOT NULL,
+							UNIQUE (guild_id, min_amount),
+							UNIQUE (guild_id, role_id)
+						);
+					"""
+				).format(
+					Identifier(_DONATION_TIERS),
+					Identifier(_DONATION_SETTINGS)
+				))
+
+				await connect.execute(SQL(
+					"""
+						CREATE INDEX IF NOT EXISTS
+						idx_donation_logs_guild_user ON
+						{} (guild_id, user_id) INCLUDE (amount);
+					""",
+				).format(
+					Identifier(_DONATION_LOGS)
+				))
 				
 				await connect.commit()
 				await self.__enable_security(connect = connect)
