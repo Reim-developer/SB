@@ -5,6 +5,7 @@ from core_utils.logging import Log
 from core_utils.container import container_instance
 from widgets.confession_widget import ReplyWidget
 from core_utils.giveaway_timer import GiveawayTimer, TimerData
+from core_utils.prefixes import prefixes
 
 with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
@@ -49,13 +50,14 @@ async def __setup_cogs() -> None:
 			print(f"Could not load cog: {cog} with error: {error}")
 
 bot = commands.AutoShardedBot(
-	command_prefix 	   = BOT_PREFIX, 
+	command_prefix 	   = prefixes, 
 	help_command 	   = None, 
 	intents 		   = bot_intents,
 	case_insensitive   = True,
 	strip_after_prefix = True,
 	shard_count 	   = SHARD_COUNT,
 	shard_ids 		   = [0, 1],
+
 )
 
 @tasks.loop(minutes = 5)
