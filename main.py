@@ -2,13 +2,16 @@ from json import load
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
 from core_utils.container import container_instance
+from core_utils.prefixes import prefixes
 from widgets.confession_widget import ReplyWidget
 from core_utils.giveaway_timer import GiveawayTimer, TimerData
 
+# Todo: Removed this in future 
+# and implement class `MainBot` or `ClientManager`...
 with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
 	BOT_TOKEN = json_data["BOT_TOKEN"]
-	BOT_PREFIX = json_data["BOT_PREFIX"]
+	# BOT_PREFIX = json_data["BOT_PREFIX"] # Removed, use `prefixes` instead 
 
 SHARD_COUNT 		  = 3
 bot_intents 		  = Intents.all()
@@ -44,7 +47,7 @@ async def __setup_cogs() -> None:
 			print(f"Could not load cog: {cog} with error: {error}")
 
 bot = commands.AutoShardedBot(
-	command_prefix = BOT_PREFIX, 
+	command_prefix = prefixes, 
 	help_command = None, 
 	intents = bot_intents,
 	case_insensitive = True,
