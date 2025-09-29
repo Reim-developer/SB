@@ -7,23 +7,17 @@ from psycopg_pool import AsyncConnectionPool
 from core_utils.config import ConfigUtils
 from core_utils.logging import StatusCode, Log
 from urllib.parse import quote_plus
+from .tables import Tables
 
 _ACP 		       = AsyncConnectionPool[AsyncConnection[TupleRow]]
 _MAX_TIMEOUT       = 30
-_BLACKLIST 		   = "blacklist"
-_GIVEAWAYS		   = "giveaways"
-_GUILD_CONFIGS     = "guild_configs" 
-_DONATION_SETTINGS = "donation_settings"
-_DONATION_LOGS     = "donation_logs"
-_DONATION_TIERS    = "donation_tiers"
 
 class PostgresManager:
 	def __init__(self) -> None:
 		self.config = ConfigUtils.database_config()
 		self.pool: Optional[_ACP] = None
 		self.TABLES = [
-			_BLACKLIST, _GIVEAWAYS, _GUILD_CONFIGS, 
-			_DONATION_LOGS, _DONATION_SETTINGS, _DONATION_TIERS
+			member.value for member in Tables.__members__.values()
 		]
 
 	async def __aenter__(self) -> Self:
@@ -92,14 +86,14 @@ class PostgresManager:
 							guild_id 		   	  BIGINT PRIMARY KEY,
 							confession_channel_id BIGINT
 						);
-				   	""").format(Identifier(_GUILD_CONFIGS)))
+				   	""").format(Identifier(Tables.GUILD_CONFIGS)))
 				
 				await connect.execute(SQL(
 					"""--sql
 						CREATE TABLE IF NOT EXISTS {} (
 							user_id BIGINT PRIMARY KEY
 						);
-					""").format(Identifier(_BLACKLIST)))
+					""").format(Identifier(Tables.BLACKLIST)))
 
 				await connect.execute(SQL(
 					""" 
@@ -114,8 +108,8 @@ class PostgresManager:
 								ON DELETE CASCADE
 						);
 					""").format(
-						Identifier(_GIVEAWAYS), 
-						Identifier(_GUILD_CONFIGS)
+						Identifier(Tables.GIVEAWAYS), 
+						Identifier(Tables.GUILD_CONFIGS)
 					))
 				
 				await connect.execute(SQL(
@@ -126,8 +120,8 @@ class PostgresManager:
 							money_unit     TEXT NOT NULL DEFAULT 'credits'
 					);"""
 				).format(
-					Identifier(_DONATION_SETTINGS),
-					Identifier(_GUILD_CONFIGS)
+					Identifier(Tables.DONATION_SETTINGS),
+					Identifier(Tables.GUILD_CONFIGS)
 				))
 
 				await connect.execute(SQL(
@@ -141,8 +135,8 @@ class PostgresManager:
 						);
 					"""
 				).format(
-					Identifier(_DONATION_LOGS),
-					Identifier(_DONATION_SETTINGS)
+					Identifier(Tables.DONATION_LOGS),
+					Identifier(Tables.DONATION_SETTINGS)
 				))
 
 				await connect.execute(SQL(
@@ -152,13 +146,13 @@ class PostgresManager:
 							guild_id   BIGINT NOT NULL REFERENCES {} (guild_id) ON DELETE CASCADE,
 							min_amount NUMERIC(18, 4) NOT NULL CHECK (min_amount > 0),
 							role_id    BIGINT NOT NULL,
-							UNIQUE (guild_id, min_amount),
-							UNIQUE (guild_id, role_id)
+							UNIQUE 	   (guild_id, min_amount),
+							UNIQUE     (guild_id, role_id)
 						);
 					"""
 				).format(
-					Identifier(_DONATION_TIERS),
-					Identifier(_DONATION_SETTINGS)
+					Identifier(Tables.DONATION_TIERS),
+					Identifier(Tables.DONATION_SETTINGS)
 				))
 
 				await connect.execute(SQL(
@@ -168,7 +162,7 @@ class PostgresManager:
 						{} (guild_id, user_id) INCLUDE (amount);
 					""",
 				).format(
-					Identifier(_DONATION_LOGS)
+					Identifier(Tables.DONATION_LOGS)
 				))
 				
 				await connect.commit()
