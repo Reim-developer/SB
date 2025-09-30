@@ -1,19 +1,21 @@
 from json import load 
 from discord import Intents, Status, Game
 from discord.ext import commands, tasks
-from core_utils.logging import Log
 from core_utils.container import container_instance
+from core_utils.prefixes import prefixes
 from widgets.confession_widget import ReplyWidget
 from core_utils.giveaway_timer import GiveawayTimer, TimerData
-from core_utils.prefixes import prefixes
 
-with open(file = "./config/config.test.json", mode = "r", encoding = "utf-8") as config_file:
+# Todo: Removed this in future 
+# and implement class `MainBot` or `ClientManager`...
+with open(file = "./config/config.json", mode = "r", encoding = "utf-8") as config_file:
 	json_data = load(config_file)
 	BOT_TOKEN = json_data["BOT_TOKEN"]
-	BOT_PREFIX = json_data["BOT_PREFIX"]
+	# BOT_PREFIX = json_data["BOT_PREFIX"] # Removed, use `prefixes` instead 
 
-SHARD_COUNT =  2
-bot_intents = Intents.all()
+SHARD_COUNT 		  = 3
+bot_intents 		  = Intents.all()
+bot_intents.presences = False
 
 async def __setup_cogs() -> None:
 	cog_list = [
@@ -25,19 +27,14 @@ async def __setup_cogs() -> None:
 		"cogs.utils.prefix.avatar",
 		"cogs.utils.prefix.help",
 		"cogs.utils.prefix.member_count",
-		"cogs.utils.prefix.server_info",
 		"cogs.utils.slash.set_confession",
 		"cogs.utils.slash.confession",
 		"cogs.utils.slash.giveaway",
 		"cogs.utils.slash.giveaway_reroll",
-		"cogs.utils.slash.embed_builder",
-		"cogs.utils.slash.donation_log",
-		"cogs.utils.slash.donation_unit",
-		"cogs.utils.slash.donation_add",
-		"cogs.utils.slash.donation_get",
 		"cogs.owner.prefix.blacklist",
 		"cogs.owner.prefix.unblacklist",
 		"cogs.owner.prefix.sync_slash",
+		"cogs.utils.slash.embed_builder",
 		"cogs.anime.slash.anime_info"
 	]
 
@@ -50,15 +47,15 @@ async def __setup_cogs() -> None:
 			print(f"Could not load cog: {cog} with error: {error}")
 
 bot = commands.AutoShardedBot(
-	command_prefix 	   = prefixes, 
-	help_command 	   = None, 
-	intents 		   = bot_intents,
+	command_prefix     = prefixes, 
+	help_command   	   = None, 
+	intents 	       = bot_intents,
 	case_insensitive   = True,
 	strip_after_prefix = True,
-	shard_count 	   = SHARD_COUNT,
-	shard_ids 		   = [0, 1],
-
+	shard_count        = SHARD_COUNT,
+	shard_ids          = [0, 1, 2]
 )
+
 
 @tasks.loop(minutes = 5)
 async def update_presence() -> None:
@@ -67,11 +64,12 @@ async def update_presence() -> None:
 		activity = Game(name = f"With {len(bot.users)} users | {len(bot.guilds)} servers")
 	)
 	
-	Log.info(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
-	Log.info(f"Shard Count: {bot.shard_count}")
-	Log.info(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
-	Log.info(f"On: {len(bot.guilds)} servers")
-	Log.info(f"On: {len(bot.users)} members")	
+	print(f"Online as: {bot.user.name if bot.user else  'unknown bot name'}")
+	print(f"Shard Count: {bot.shard_count}")
+	print(f"Shard IDs: {list(bot.shards.keys()) if bot.shards else 'No shards'}")
+	print(f"On: {len(bot.guilds)} servers")
+	print(f"On: {len(bot.users)} members")	
+
 
 @bot.event
 async def on_ready() -> None:
@@ -87,5 +85,5 @@ async def on_ready() -> None:
 	)).load_active_gws()
 
 	await update_presence.start()
-	
+
 bot.run(token = BOT_TOKEN)
