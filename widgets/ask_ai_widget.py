@@ -29,7 +29,7 @@ class AskAIWidget(View):
 		self.__prev_button.disabled = self.__current_page <= 0
 
 	async def __on_next_page(self, interaction: Interaction) -> None:
-		if interaction.user.id != self.__interaction.id:
+		if interaction.user.id != self.__interaction.user.id:
 			await interaction.response.send_message(
 				content   = (
 					"You cannot interact with this "
@@ -54,7 +54,7 @@ class AskAIWidget(View):
 			await interaction.response.defer()
 
 	async def __on_prev_page(self, interaction: Interaction) -> None:
-		if interaction.user.id != self.__interaction.id:
+		if interaction.user.id != self.__interaction.user.id:
 			await interaction.response.send_message(
 				content   = (
 					"You cannot interact with this "
