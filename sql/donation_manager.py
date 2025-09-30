@@ -129,7 +129,8 @@ class DonationManager:
 
 				result = await row.fetchone()
 
-				return result[0] if result else Decimal("0")
+				amount = result[0] if result else Decimal("0")
+				return amount.normalize()
 			
 		except Exception as error:
 			Log.critical((
@@ -138,6 +139,6 @@ class DonationManager:
 				f"With error: {error}"
 			))
 
-			return Decimal("0")
+			return Decimal("0").normalize()
 
 	
