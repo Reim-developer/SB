@@ -3,10 +3,11 @@ from discord import ButtonStyle, Interaction
 from discord.ui import View, Button
 
 class AskAIWidget(View):
-	def __init__(self, pages: List[str]):
+	def __init__(self, pages: List[str], _interaction: Interaction):
 		super().__init__(timeout = 180)
 		self.__pages 		= pages 
 		self.__current_page = 0
+		self.__interaction  = _interaction
 
 		self.__next_button: Button[Self]  = Button(
 			label = "Next Page", style = ButtonStyle.gray
@@ -28,6 +29,18 @@ class AskAIWidget(View):
 		self.__prev_button.disabled = self.__current_page <= 0
 
 	async def __on_next_page(self, interaction: Interaction) -> None:
+		if interaction.user.id != self.__interaction.id:
+			await interaction.response.send_message(
+				content   = (
+					"You cannot interact with this "
+					"button because you're not the command "
+					"executor"
+				),
+				ephemeral = True
+			)
+
+			return 
+
 		if self.__current_page < len(self.__pages) - 1:
 			self.__current_page += 1
 			self.__update_buttons()
@@ -41,6 +54,18 @@ class AskAIWidget(View):
 			await interaction.response.defer()
 
 	async def __on_prev_page(self, interaction: Interaction) -> None:
+		if interaction.user.id != self.__interaction.id:
+			await interaction.response.send_message(
+				content   = (
+					"You cannot interact with this "
+					"button because you're not the command "
+					"executor"
+				),
+				ephemeral = True
+			)
+
+			return 
+
 		if self.__current_page > 0:
 			self.__current_page -= 1
 			self.__update_buttons()

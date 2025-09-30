@@ -74,7 +74,10 @@ class AskAISlash(commands.Cog):
 		await interaction.followup.send(
 			content = pages[0],
 			allowed_mentions = self._DAM,
-			view 			 = AskAIWidget(pages = pages)
+			view 			 = AskAIWidget(
+				pages 		 = pages,
+				_interaction = interaction
+			)
 		)
 
 async def setup(bot: commands.Bot) -> None:
