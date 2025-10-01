@@ -19,8 +19,8 @@ class AskAIWidget(View):
 		self.__next_button.callback = self.__on_next_page
 		self.__prev_button.callback = self.__on_prev_page
 
-		self.add_item(self.__next_button)
 		self.add_item(self.__prev_button)
+		self.add_item(self.__next_button)
 
 		self.__update_buttons()
 
