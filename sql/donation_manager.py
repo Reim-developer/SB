@@ -123,6 +123,14 @@ class DonationManager:
 					connection = connection,
 					guild_id   = data.guild_id 
 				)
+
+				await connection.execute(
+					"INSERT INTO donation_settings (guild_id) "
+					"VALUES (%s) "
+					"ON CONFLICT (guild_id) DO NOTHING;",
+					(data.guild_id,)
+				)
+
 				await connection.execute(
 					"""
 						INSERT INTO donation_logs (guild_id, user_id, amount)
