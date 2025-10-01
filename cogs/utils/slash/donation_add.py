@@ -1,18 +1,9 @@
 from discord.ext import commands
 from core_utils.container import container_instance
-from sql.donation_manager import DonationManager, DonationData
-from discord import app_commands, User, Member, Interaction, Embed
+from sql.donation_manager import DonationManager
+from discord import app_commands, Member, Interaction
 from core_utils.type_alias import DisableAllMentions, CanSendMessageChannel
-from dataclasses import dataclass
-from core_utils.time_utils import TimeUtils
-
-@dataclass
-class _DonationAddContext:
-	channel_id:   int
-	user: 	  User | Member
-	added_amount: float
-	interaction:  Interaction
-	money_unit:   str 
+from widgets.donation_add_widget import DonationAddWidget, DonationDataContext
 
 _CSMC = CanSendMessageChannel
 class DonationAddSlash(commands.Cog):
@@ -25,32 +16,6 @@ class DonationAddSlash(commands.Cog):
 
 		assert self.pool is not None
 		self.donation_manager = DonationManager(self.pool)
-
-	async def __send_add_donation(self, ctx: _DonationAddContext) -> None:
-		assert ctx.interaction.guild is not None # It's always not `None`
-
-		channel = ctx.interaction.guild.get_channel(ctx.channel_id)
-		if channel and isinstance(channel, _CSMC):
-			await channel.send(embed = Embed(
-				title       = "Add Donation Notification",
-				description = (
-					f"* By: {ctx.interaction.user} | `{ctx.interaction.id}`\n"
-					f"* To: {ctx.user.name} | `{ctx.user.id}`\n"
-					f"* At: <t:{TimeUtils.unix_time()}:R>\n"
-					f"* Added Amount: `{ctx.added_amount}` `{ctx.money_unit}`"
-				),
-				color       = 0xb8c0cf
-			).set_thumbnail(
-				url = (
-					ctx.interaction.user.avatar.url
-					if ctx.interaction.user.avatar 
-					else ctx.interaction.guild.icon.url 
-					if ctx.interaction.guild.icon 
-					else self.bot.user.avatar.url
-					if self.bot.user and self.bot.user.avatar
-					else None
-				)
-			))
 
 	@app_commands.command(
 		name 		= "donation_add",
@@ -65,7 +30,7 @@ class DonationAddSlash(commands.Cog):
 	@app_commands.checks.cooldown(rate = 1, per = 15, key = lambda i: i.user.id)
 	async def donation_add(self, 
 						interaction: Interaction, 
-						user: User | Member, amount: float) -> None:
+						user: Member, amount: float) -> None:
 		if not interaction.guild:
 			await interaction.response.send_message(
 				content = (
@@ -87,31 +52,31 @@ class DonationAddSlash(commands.Cog):
 			return
 		
 		await interaction.response.defer()
-
-		await self.donation_manager.add_donation(DonationData(
-			guild_id = interaction.guild.id,
-			user_id  = user.id,
-			amount   = amount
-		))
-		money_unit = await self.donation_manager.get_money_unit(
+		
+		unit_money = await self.donation_manager.get_money_unit(
 			guild_id = interaction.guild.id
 		)
 		channel_id = await self.donation_manager.get_log_channel(
 			guild_id = interaction.guild.id 
 		)
-
-		if channel_id:
-			await self.__send_add_donation(_DonationAddContext(
-				channel_id   = channel_id,
-				interaction  = interaction,
-				user 	     = user,
-				added_amount = amount,
-				money_unit   = money_unit 
-			))
-
-		await interaction.followup.send(
-			f"* Successfully add `{amount}` `{money_unit}` to {user.display_name}",
+		webhook_message = await interaction.followup.send(
+			f"Confirm to add: `{amount}` `{unit_money}` "
+			f"to: **{user.name}**",
+			wait 			 = True,
 			allowed_mentions = self._DAM
+		)
+
+		await webhook_message.edit(
+			view = DonationAddWidget(
+				ctx = DonationDataContext(
+					interaction 	= interaction,
+					unit_money  	= unit_money,
+					amount 			= amount,
+					log_channel 	= channel_id,
+					donator     	= user,
+					webhook_message = webhook_message
+				)
+			)
 		)
 
 async def setup(bot: commands.Bot) -> None:
