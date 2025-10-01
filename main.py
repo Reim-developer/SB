@@ -1,8 +1,11 @@
-from sys 		  import argv
+from sys 		  import argv, exit
 from sys 		  import stdout
-from bot_manager import BotManager
+from bot_manager  import BotManager
+from typing 	  import NoReturn
 
-def _show_help() -> None:
+def _show_help() -> NoReturn:
+	OK = 0
+	
 	stdout.write(
 		f"Usage: {argv[0]} [OPTIONS]\n"
 		"[+] For running bot in dev environment\n"
@@ -11,6 +14,8 @@ def _show_help() -> None:
 		"[+] For running bot in product environment\n"
 		f"[!] python {argv[0]} --prod\n"
 	)
+
+	exit(OK)
 
 def parse() -> None:
 	MIN_ARGV    = 2 
