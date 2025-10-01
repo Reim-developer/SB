@@ -1,9 +1,11 @@
-from discord.ext import commands
-from discord.guild import Guild
+from discord.ext           import commands
+from discord.guild         import Guild
 from core_utils.type_alias import (
 	CanSendMessageChannel, DisableAllMentions
 )
 from core_utils.container import container_instance
+from sql.tables 		  import Tables
+from psycopg.sql 		  import SQL, Identifier
 
 _CSMC 			  = CanSendMessageChannel
 _DAM 			  =  DisableAllMentions
@@ -19,7 +21,8 @@ class OnBotLeaveLogging(commands.Cog):
 
 		async with self.__pool.connection() as connection:
 			await connection.execute(
-				"DELETE FROM guild_configs WHERE guild_id = %s",
+				SQL("DELETE FROM {} WHERE guild_id = %s")
+				.format(Identifier(Tables.GUILDS)),
 			(guild_id,))
 
 	@commands.Cog.listener()
@@ -30,6 +33,11 @@ class OnBotLeaveLogging(commands.Cog):
 				content = (
 					f"**__Bot Leave Notification:__**\n" \
 					f"* Guild name: **{guild.name}**\n" \
+					f"* Guild Member Count: {(
+						f'`{guild.member_count}` Member(s)' 
+						if guild.member_count 
+						else '`Unknown Member Count`'
+					)}\n" \
 					f"* Guild ID: `{guild.id}`\n" \
 					f"* Current Guild Count: `{len(self.bot.guilds)}` guild"
 				),
