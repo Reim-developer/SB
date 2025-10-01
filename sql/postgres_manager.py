@@ -81,12 +81,21 @@ class PostgresManager:
 		try:
 			async with self.pool.connection() as connect:
 				await connect.execute(SQL(
+					"CREATE TABLE IF NOT EXISTS {} " 
+					"(guild_id BIGINT PRIMARY KEY);"
+				).format(Identifier(Tables.GUILDS)))
+
+				await connect.execute(SQL(
 					"""--sql
 						CREATE TABLE IF NOT EXISTS {} (
-							guild_id 		   	  BIGINT PRIMARY KEY,
+							guild_id BIGINT PRIMARY KEY REFERENCES {} (guild_id)
+							ON DELETE CASCADE,
 							confession_channel_id BIGINT
 						);
-				   	""").format(Identifier(Tables.GUILD_CONFIGS)))
+				   	""").format(
+						   Identifier(Tables.GUILD_CONFIGS),
+						   Identifier(Tables.GUILDS)
+					))
 				
 				await connect.execute(SQL(
 					"""--sql
@@ -109,7 +118,7 @@ class PostgresManager:
 						);
 					""").format(
 						Identifier(Tables.GIVEAWAYS), 
-						Identifier(Tables.GUILD_CONFIGS)
+						Identifier(Tables.GUILDS)
 					))
 				
 				await connect.execute(SQL(
@@ -121,7 +130,7 @@ class PostgresManager:
 					);"""
 				).format(
 					Identifier(Tables.DONATION_SETTINGS),
-					Identifier(Tables.GUILD_CONFIGS)
+					Identifier(Tables.GUILDS)
 				))
 
 				await connect.execute(SQL(
