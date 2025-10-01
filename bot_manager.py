@@ -17,6 +17,32 @@ class _PropsManager:
 		self.__dev_mode = dev_mode
 
 	async def setup_cogs(self, bot: commands.AutoShardedBot) -> None:
+		dev_cog_list = [
+			"cogs.events.cooldown",
+			"cogs.events.cooldown_slash",
+			"cogs.logging.on_bot_leave",
+			"cogs.logging.on_bot_join",
+			"cogs.utils.prefix.invite",
+			"cogs.utils.prefix.avatar",
+			"cogs.utils.prefix.help",
+			"cogs.utils.prefix.member_count",
+			"cogs.utils.slash.set_confession",
+			"cogs.utils.slash.confession",
+			"cogs.utils.slash.giveaway",
+			"cogs.utils.slash.giveaway_reroll",
+			"cogs.utils.slash.ask_ai",
+			"cogs.utils.slash.donation_add",
+			"cogs.utils.slash.donation_fetch",
+			"cogs.utils.slash.donation_get",
+			"cogs.utils.slash.donation_unit",
+			"cogs.utils.slash.donation_log",
+			"cogs.owner.prefix.blacklist",
+			"cogs.owner.prefix.unblacklist",
+			"cogs.owner.prefix.sync_slash",
+			"cogs.utils.slash.embed_builder",
+			"cogs.anime.slash.anime_info"
+		]
+
 		cog_list = [
 			"cogs.events.cooldown",
 			"cogs.events.cooldown_slash",
@@ -38,7 +64,11 @@ class _PropsManager:
 			"cogs.anime.slash.anime_info"
 		]
 
-		for cog in cog_list:
+		for cog in (
+			cog_list 
+			if not self.__dev_mode 
+			else dev_cog_list
+		):
 			try:
 				await bot.load_extension(cog)
 				Log.info(f"Load cog: {cog} successfully")
