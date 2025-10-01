@@ -1,8 +1,9 @@
-from typing import Optional
-from psycopg_pool import AsyncConnectionPool
-from psycopg import AsyncConnection
-from psycopg.rows import TupleRow
+from typing             import Optional
+from psycopg_pool       import AsyncConnectionPool
+from psycopg            import AsyncConnection
+from psycopg.rows       import TupleRow
 from core_utils.logging import Log
+from core_utils.guilds  import GuildUtils
 
 _ACP = AsyncConnectionPool[AsyncConnection[TupleRow]]
 
@@ -15,6 +16,11 @@ class ConfessionManager:
 		
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id
+				)
+
 				await connect.execute(
 					"""
 						INSERT INTO guild_configs (guild_id, confession_channel_id)

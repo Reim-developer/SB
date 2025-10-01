@@ -1,8 +1,9 @@
-from dataclasses import dataclass
-from psycopg_pool import AsyncConnectionPool
-from psycopg import AsyncConnection
-from psycopg.rows import TupleRow
+from dataclasses        import dataclass
+from psycopg_pool       import AsyncConnectionPool
+from psycopg 	        import AsyncConnection
+from psycopg.rows       import TupleRow
 from core_utils.logging import Log
+from core_utils.guilds  import GuildUtils
 
 _ACP = AsyncConnectionPool[AsyncConnection[TupleRow]]
 
@@ -20,6 +21,10 @@ class GiveawayManager:
 	async def set_giveaway(self, gws_data: GwsManagerData) -> None:
 		try:
 			async with self.__pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = gws_data.guild_id 
+				)
 				await connect.execute(
 					"INSERT INTO giveaways (guild_id, channel_id, message_id, end_at) "
 					"VALUES (%s, %s, %s, %s) "

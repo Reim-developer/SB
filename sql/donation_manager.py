@@ -1,10 +1,11 @@
-from typing import Optional
-from psycopg_pool import AsyncConnectionPool
-from psycopg import AsyncConnection
-from psycopg.rows import TupleRow
+from typing       		import Optional
+from psycopg_pool 		import AsyncConnectionPool
+from psycopg 			import AsyncConnection
+from psycopg.rows 	    import TupleRow
 from core_utils.logging import Log
-from dataclasses import dataclass
-from decimal import Decimal
+from dataclasses 		import dataclass
+from decimal 			import Decimal
+from core_utils.guilds  import GuildUtils
 
 _ACP = AsyncConnectionPool[AsyncConnection[TupleRow]]
 
@@ -22,6 +23,10 @@ class DonationManager:
 						guild_id: int, channel_id: int) -> None:
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id 
+				)
 				await connect.execute(
 					"""
 						INSERT INTO donation_settings (guild_id, log_channel_id)
@@ -40,6 +45,10 @@ class DonationManager:
 	async def get_log_channel(self, guild_id: int) -> Optional[int]:
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id 
+				)
 				row = await connect.execute(
 					"""
 						SELECT log_channel_id FROM donation_settings
@@ -61,6 +70,10 @@ class DonationManager:
 						guild_id: int, money_unit: str) -> None:
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id 
+				)
 				await connect.execute(
 					"""
 						INSERT INTO donation_settings (guild_id, money_unit)
@@ -80,6 +93,10 @@ class DonationManager:
 		_DEFAULT_UNIT = "credits"
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id 
+				)
 				row = await connect.execute(
 					"""
 						SELECT money_unit FROM donation_settings WHERE guild_id = %s
@@ -102,6 +119,10 @@ class DonationManager:
 		
 		try:
 			async with self.pool.connection() as connection:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connection,
+					guild_id   = data.guild_id 
+				)
 				await connection.execute(
 					"""
 						INSERT INTO donation_logs (guild_id, user_id, amount)
@@ -119,6 +140,10 @@ class DonationManager:
 	async def get_user_donation(self, guild_id: int, user_id: int) -> Decimal:
 		try:
 			async with self.pool.connection() as connect:
+				await GuildUtils.add_guild_if_not_exists(
+					connection = connect,
+					guild_id   = guild_id 
+				)
 				row = await connect.execute(
 					"""
 						SELECT COALESCE (SUM(amount), 0)
