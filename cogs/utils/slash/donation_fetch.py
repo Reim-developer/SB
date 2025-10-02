@@ -1,33 +1,41 @@
-from discord.ext 		   import commands
-from discord 			   import app_commands, Interaction, User, Member
-from sql.donation_manager  import DonationManager
-from core_utils.container  import container_instance
-from core_utils.type_alias import DisableAllMentions
+from discord.ext 		   		   import commands
+from discord 			   		   import app_commands, Interaction, Member
+from sql.donation_manager  		   import DonationManager
+from core_utils.container  		   import container_instance
+from core_utils.type_alias 		   import DisableAllMentions
+from caches.donation_cache 		   import DonationCache
+from core_utils.autocomplete_slash import AutoComplete
 
 class DonationFetchSlash(commands.Cog):
 	_NO_DONATE_VALUE = 0
 	_DAM 		     = DisableAllMentions
 
 	def __init__(self, bot: commands.Bot) -> None:
-		self.bot 	= bot
-		self.__pool = container_instance.get_postgres_manager().pool
+		self.bot 	        = bot
+		self.__pool         = container_instance.get_postgres_manager().pool
+		self.redis 			= container_instance.get_redis_manager().new_or_get()
+		self.donation_cache = DonationCache(redis = self.redis)
 
 		assert self.__pool is not None
-		self.__donation_manager = DonationManager(self.__pool)
+		self.__donation_manager = DonationManager(self.__pool, self.donation_cache)
+		self.auto_complete      = AutoComplete(self.__donation_manager)
+
+		self.donation_fetch.autocomplete("unit_name")(self.auto_complete.unit_autocomplete)
 
 	@app_commands.command(
 		name 		= "donation_fetch",
 		description = "Fetch donation value of user"
 	)
 	@app_commands.describe(
-		user = "Member or user ID"
+		user 	  = "Member or user ID",
+		unit_name = "Name of unit you want fetch"
 	)
 	@app_commands.default_permissions(administrator = True)
 	@app_commands.checks.cooldown(rate = 1, per = 15, key = lambda i: i.user.id)
 	@app_commands.checks.bot_has_permissions(administrator = True)
 	async def donation_fetch(self, 
 						  interaction: Interaction, 
-						  user: User | Member) -> None:
+						  user: Member, unit_name: str) -> None:
 		if not interaction.guild:
 			await interaction.response.send_message(
 				content = (
@@ -38,12 +46,10 @@ class DonationFetchSlash(commands.Cog):
 
 			return
 		
-		unit_money = await self.__donation_manager.get_money_unit(
-			guild_id = interaction.guild.id
-		)
 		user_donation = await self.__donation_manager.get_user_donation(
-			guild_id = interaction.guild.id,
-			user_id  = user.id 
+			guild_id  = interaction.guild.id,
+			user_id   = user.id,
+			unit_name = unit_name 
 		)
 		if user_donation == self._NO_DONATE_VALUE:
 			await interaction.response.send_message(
@@ -56,7 +62,7 @@ class DonationFetchSlash(commands.Cog):
 		
 		await interaction.response.send_message(
 			content = (
-				f"{user.name} donated `{user_donation:f}` **{unit_money}** "
+				f"{user.name} donated `{user_donation:f}` {unit_name} "
 				"to the server"
 			),
 			allowed_mentions = self._DAM
