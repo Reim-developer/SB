@@ -1,13 +1,13 @@
-from types import TracebackType
-from typing import Optional, Self
-from psycopg import AsyncConnection
-from psycopg.rows import TupleRow
-from psycopg.sql import SQL, Identifier
-from psycopg_pool import AsyncConnectionPool
-from core_utils.config import ConfigUtils
+from types        		import TracebackType
+from typing  	  		import Optional, Self
+from psycopg 	  		import AsyncConnection
+from psycopg.rows 		import TupleRow
+from psycopg.sql  		import SQL, Identifier
+from psycopg_pool 		import AsyncConnectionPool
+from core_utils.config  import ConfigUtils
 from core_utils.logging import StatusCode, Log
-from urllib.parse import quote_plus
-from .tables import Tables
+from urllib.parse 		import quote_plus
+from .tables 			import Tables
 
 _ACP 		       = AsyncConnectionPool[AsyncConnection[TupleRow]]
 _MAX_TIMEOUT       = 30
@@ -125,8 +125,7 @@ class PostgresManager:
 					"""
 						CREATE TABLE IF NOT EXISTS {} (
 							guild_id BIGINT PRIMARY KEY REFERENCES {} (guild_id) ON DELETE CASCADE,
-							log_channel_id BIGINT,
-							money_unit     TEXT NOT NULL DEFAULT 'credits'
+							log_channel_id BIGINT
 					);"""
 				).format(
 					Identifier(Tables.DONATION_SETTINGS),
@@ -134,18 +133,32 @@ class PostgresManager:
 				))
 
 				await connect.execute(SQL(
+					"CREATE TABLE IF NOT EXISTS {} ( "
+					"guild_id BIGINT NOT NULL REFERENCES {} (guild_id) "
+					"ON DELETE CASCADE, "
+					"unit_name TEXT NOT NULL CHECK(length(unit_name) BETWEEN 1 AND 32),"
+					"PRIMARY KEY (guild_id, unit_name) "
+					");"
+				).format(Identifier(Tables.DONATION_UNITS), Identifier(Tables.GUILDS)))
+
+				await connect.execute(SQL(
 					"""
 						CREATE TABLE IF NOT EXISTS {} (
 							id 		   BIGSERIAL PRIMARY KEY,
 							guild_id   BIGINT NOT NULL REFERENCES {} (guild_id) ON DELETE CASCADE,
 							user_id	   BIGINT NOT NULL,
+							unit_name  TEXT NOT NULL CHECK (length(unit_name) BETWEEN 1 AND 32),
 							amount     NUMERIC(18, 4) NOT NULL CHECK (amount > 0),
-							donated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+							donated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+							FOREIGN KEY (guild_id, unit_name)
+								REFERENCES {} (guild_id, unit_name)
+							ON DELETE RESTRICT
 						);
 					"""
 				).format(
 					Identifier(Tables.DONATION_LOGS),
-					Identifier(Tables.DONATION_SETTINGS)
+					Identifier(Tables.GUILDS),
+					Identifier(Tables.DONATION_UNITS)
 				))
 
 				await connect.execute(SQL(
@@ -161,7 +174,7 @@ class PostgresManager:
 					"""
 				).format(
 					Identifier(Tables.DONATION_TIERS),
-					Identifier(Tables.DONATION_SETTINGS)
+					Identifier(Tables.GUILDS)
 				))
 
 				await connect.execute(SQL(
