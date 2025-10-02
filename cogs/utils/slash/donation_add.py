@@ -1,9 +1,11 @@
-from discord.ext import commands
-from core_utils.container import container_instance
-from sql.donation_manager import DonationManager
-from discord import app_commands, Member, Interaction
-from core_utils.type_alias import DisableAllMentions, CanSendMessageChannel
-from widgets.donation_add_widget import DonationAddWidget, DonationDataContext
+from discord.ext                  import commands
+from caches.donation_cache import DonationCache
+from core_utils.container          import container_instance
+from sql.donation_manager          import DonationManager
+from discord                       import app_commands, Member, Interaction
+from core_utils.type_alias         import DisableAllMentions, CanSendMessageChannel
+from widgets.donation_add_widget   import DonationAddWidget, DonationDataContext
+from core_utils.autocomplete_slash import AutoComplete
 
 _CSMC = CanSendMessageChannel
 class DonationAddSlash(commands.Cog):
@@ -11,25 +13,32 @@ class DonationAddSlash(commands.Cog):
 	_DAM        = DisableAllMentions
 
 	def __init__(self, bot: commands.Bot) -> None:
-		self.bot  = bot
-		self.pool = container_instance.get_postgres_manager().pool
+		self.bot   			= bot
+		self.pool  			= container_instance.get_postgres_manager().pool
+		self.redis 			= container_instance.get_redis_manager().new_or_get()
+		self.donation_cache = DonationCache(redis = self.redis)
 
 		assert self.pool is not None
-		self.donation_manager = DonationManager(self.pool)
+		self.donation_manager = DonationManager(self.pool, self.donation_cache)
+		self.auto_complete    = AutoComplete(self.donation_manager)
+
+		self.donation_add.autocomplete("unit_name")(self.auto_complete.unit_autocomplete)
 
 	@app_commands.command(
 		name 		= "donation_add",
 		description = "Add donation to user"
 	)
 	@app_commands.describe(
-		user   = "User you want add",
-		amount = "Amount"
+		unit_name   = "Unit you want add",
+		user   		= "User you want add",
+		amount 		= "Amount"
 	)
 	@app_commands.default_permissions(administrator = True)
 	@app_commands.checks.bot_has_permissions(administrator = True)
 	@app_commands.checks.cooldown(rate = 1, per = 15, key = lambda i: i.user.id)
 	async def donation_add(self, 
-						interaction: Interaction, 
+						interaction: Interaction,
+						unit_name: str, 
 						user: Member, amount: float) -> None:
 		if not interaction.guild:
 			await interaction.response.send_message(
@@ -52,15 +61,12 @@ class DonationAddSlash(commands.Cog):
 			return
 		
 		await interaction.response.defer()
-		
-		unit_money = await self.donation_manager.get_money_unit(
-			guild_id = interaction.guild.id
-		)
+	
 		channel_id = await self.donation_manager.get_log_channel(
 			guild_id = interaction.guild.id 
 		)
 		webhook_message = await interaction.followup.send(
-			f"Confirm to add: `{amount}` `{unit_money}` "
+			f"Confirm to add: `{amount}` {unit_name} "
 			f"to: **{user.name}**",
 			wait 			 = True,
 			allowed_mentions = self._DAM
@@ -70,7 +76,7 @@ class DonationAddSlash(commands.Cog):
 			view = DonationAddWidget(
 				ctx = DonationDataContext(
 					interaction 	= interaction,
-					unit_money  	= unit_money,
+					unit_name  		= unit_name,
 					amount 			= amount,
 					log_channel 	= channel_id,
 					donator     	= user,
