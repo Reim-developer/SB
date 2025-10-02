@@ -10,11 +10,12 @@ from sql.donation_manager  import DonationManager, DonationData
 from core_utils.type_alias import CanSendMessageChannel
 from core_utils.time_utils import TimeUtils
 from datetime 			   import datetime
+from caches.donation_cache import DonationCache
 
 @dataclass
 class DonationDataContext:
 	interaction: 	 Interaction
-	unit_money:  	 str
+	unit_name:  	 str
 	amount: 	 	 int | float
 	log_channel: 	 Optional[int]
 	donator: 	 	 Member
@@ -24,12 +25,14 @@ class DonationAddWidget(View):
 	_CSMC = CanSendMessageChannel
 	def __init__(self, ctx: DonationDataContext) -> None:
 		super().__init__(timeout = 30)
-		self.__ctx 	 	   = ctx
-		self.__interaction = self.__ctx.interaction
-		self.__pool 	   = container_instance.get_postgres_manager().pool
+		self.__ctx 	 	    = ctx
+		self.__interaction  = self.__ctx.interaction
+		self.__pool 	    = container_instance.get_postgres_manager().pool
+		self.redis 			= container_instance.get_redis_manager().new_or_get()
+		self.donation_cache = DonationCache(redis = self.redis)
 
 		assert self.__pool is not None
-		self.__donation_manager = DonationManager(self.__pool)
+		self.__donation_manager = DonationManager(self.__pool, self.donation_cache)
 
 		self.__confirm_button: Button[Self] = Button(
 			label = "Confirm", 
@@ -59,7 +62,7 @@ class DonationAddWidget(View):
 					f"* By: {interaction.user.name} | `{interaction.user.id}`\n"
 					f"* To: {self.__ctx.donator.name} | `{self.__ctx.donator.id}`\n"
 					f"* At: <t:{TimeUtils.unix_time()}:R>\n"
-					f"* Added Amount: `{self.__ctx.amount}` `{self.__ctx.unit_money}`"
+					f"* Added Amount: `{self.__ctx.amount}` `{self.__ctx.unit_name}`"
 				),
 				color       = 0xb8c0cf
 			).set_thumbnail(
@@ -77,9 +80,10 @@ class DonationAddWidget(View):
 		assert interaction.guild is not None
 
 		await self.__donation_manager.add_donation(DonationData(
-			guild_id = interaction.guild.id,
-			user_id  = self.__ctx.donator.id,
-			amount   = self.__ctx.amount
+			guild_id  = interaction.guild.id,
+			user_id   = self.__ctx.donator.id,
+			unit_name = self.__ctx.unit_name,
+			amount    = self.__ctx.amount
 		))
 		channel_id = await self.__donation_manager.get_log_channel(
 			guild_id = interaction.guild.id 
@@ -110,7 +114,7 @@ class DonationAddWidget(View):
 			embed = Embed(
 				description =  ( 
 					f"Successfully added "
-					f"`{self.__ctx.amount}` `{self.__ctx.unit_money}` " 
+					f"`{self.__ctx.amount}` `{self.__ctx.unit_name}` " 
 					f"to: **{self.__ctx.donator.name}**"
 				),
 				color 	  = 0xe4fcd2,
@@ -151,10 +155,11 @@ class DonationAddWidget(View):
 
 	async def on_timeout(self) -> None:
 		message = self.__ctx.webhook_message
-		await message.edit(
-			content = (
-				f"* The transaction session with ID `{message.id}` "
-				f"has expired at: <t:{TimeUtils.unix_time()}:R>"
-			),
-			view    = None
-		)
+		if not message.components:
+			await message.edit(
+				content = (
+					f"* The transaction session with ID `{message.id}` "
+					f"has expired at: <t:{TimeUtils.unix_time()}:R>"
+				),
+				view    = None
+			)
