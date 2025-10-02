@@ -3,8 +3,11 @@ from enum import StrEnum
 class Tables(StrEnum):
 	GIVEAWAYS 		  = "giveaways"
 	BLACKLIST 		  = "blacklist"
+
 	GUILDS 			  = "guilds"
-	GUILD_CONFIGS     = "guild_configs" 
+	GUILD_CONFIGS     = "guild_configs"
+
+	DONATION_UNITS    = "donation_units"
 	DONATION_SETTINGS = "donation_settings"
 	DONATION_LOGS     = "donation_logs"
 	DONATION_TIERS    = "donation_tiers"
