@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from tomllib import load
-from pathlib import Path
-from .logging import Log, StatusCode
+from tomllib     import load
+from pathlib     import Path
+from .logging    import Log, StatusCode
 
 @dataclass
 class DatabaseConfig:
@@ -11,8 +11,37 @@ class DatabaseConfig:
 	host: str 
 	password: str
 
+@dataclass
+class CacheConfig:
+	host: str
+	port: int 
+	password: str
+
 class ConfigUtils:
 	def __init__(self) -> None: ...
+
+	@staticmethod
+	def redis() -> CacheConfig:
+		config_file = Path("config/config.toml")
+
+		if not config_file.exists():
+			Log.critical(f"TOML config file path not found: {config_file}")
+			Log.fatal(StatusCode.READ_CONFIG_ERR)
+
+		try:
+			with open(file = "config/config.toml", mode = "rb") as toml_cfg:
+				toml_data = load(toml_cfg)
+
+		except Exception as error:
+			Log.critical(f"Could not read or parse TOML string with error: {error}")
+			Log.fatal(StatusCode.DATABASE_CONNECT_ERR)
+
+		return CacheConfig(
+			host 	 = toml_data["cache"]["host"],
+			port 	 = toml_data["cache"]["port"],
+			password = toml_data["cache"]["password"]
+		)
+
 
 	@staticmethod
 	def gemini_api_keys() -> str:
