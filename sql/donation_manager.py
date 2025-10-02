@@ -1,23 +1,26 @@
-from typing       		import Optional
-from psycopg_pool 		import AsyncConnectionPool
-from psycopg 			import AsyncConnection
-from psycopg.rows 	    import TupleRow
-from core_utils.logging import Log
-from dataclasses 		import dataclass
-from decimal 			import Decimal
-from core_utils.guilds  import GuildUtils
+from typing       		   import List, Optional
+from psycopg_pool 		   import AsyncConnectionPool
+from psycopg 			   import AsyncConnection
+from psycopg.rows 	       import TupleRow
+from caches.donation_cache import DonationCache
+from core_utils.logging    import Log
+from dataclasses 		   import dataclass
+from decimal 			   import Decimal
+from core_utils.guilds     import GuildUtils
 
 _ACP = AsyncConnectionPool[AsyncConnection[TupleRow]]
 
 @dataclass
 class DonationData:
-	guild_id: int
-	user_id:  int
-	amount:   float
+	guild_id:  int
+	unit_name: str
+	user_id:   int
+	amount:    float
 
 class DonationManager:
-	def __init__(self, pool: _ACP) -> None:
-		self.pool = pool
+	def __init__(self, pool: _ACP, donation_cache: DonationCache) -> None:
+		self.pool 		    = pool
+		self.donation_cache = donation_cache
 
 	async def set_log_channel(self, 
 						guild_id: int, channel_id: int) -> None:
@@ -66,21 +69,27 @@ class DonationManager:
 			))
 			return None
 
-	async def set_money_unit(self,
-						guild_id: int, money_unit: str) -> None:
+	async def add_unit_name(self,
+						guild_id: int, unit_name: str) -> None:
 		try:
 			async with self.pool.connection() as connect:
 				await GuildUtils.add_guild_if_not_exists(
 					connection = connect,
 					guild_id   = guild_id 
 				)
+
 				await connect.execute(
 					"""
-						INSERT INTO donation_settings (guild_id, money_unit)
+						INSERT INTO donation_units (guild_id, unit_name)
 						VALUES (%s, %s)
-						ON CONFLICT (guild_id)
-						DO UPDATE SET money_unit = EXCLUDED.money_unit;
-					""", (guild_id, money_unit)
+						ON CONFLICT (guild_id, unit_name)
+						DO NOTHING;
+					""", (guild_id, unit_name)
+				)
+				
+				await self.donation_cache.add_unit_name(
+					guild_id  = guild_id,
+					unit_name = unit_name
 				)
 
 		except Exception as error:
@@ -89,30 +98,41 @@ class DonationManager:
 				f"With error: {error}"
 			)
 
-	async def get_money_unit(self, guild_id: int) -> str:
-		_DEFAULT_UNIT = "credits"
+	async def get_unit_names(self, guild_id: int) -> List[str]:
+		cached_units = await self.donation_cache.get_unit_names(
+			guild_id = guild_id
+		)
+		if cached_units:
+			return cached_units
+	
 		try:
 			async with self.pool.connection() as connect:
 				await GuildUtils.add_guild_if_not_exists(
 					connection = connect,
 					guild_id   = guild_id 
 				)
-				row = await connect.execute(
+				cursor = await connect.execute(
 					"""
-						SELECT money_unit FROM donation_settings WHERE guild_id = %s
+						SELECT unit_name FROM donation_units WHERE guild_id = %s
+						ORDER BY unit_name
 					""", (guild_id,)
 				)
+				rows = await cursor.fetchall()
+				units = [row[0] for row in rows]
 
-				result = await row.fetchone()
+			await self.donation_cache.set_unit_names(
+				guild_id = guild_id,
+				units    = units
+			)
 
-				return result[0] if result else _DEFAULT_UNIT
+			return units
 			
 		except Exception as error:
 			Log.critical((
 				f"Could not get money unit in guild ID: {guild_id}\n"
 				f"With error: {error}"
 			))
-			return _DEFAULT_UNIT
+			return []
 
 	async def add_donation(self, data: DonationData) -> None:
 		amount_decimal = Decimal(str(data.amount))
@@ -133,9 +153,9 @@ class DonationManager:
 
 				await connection.execute(
 					"""
-						INSERT INTO donation_logs (guild_id, user_id, amount)
-						VALUES (%s, %s, %s);
-					""",(data.guild_id, data.user_id, amount_decimal)
+						INSERT INTO donation_logs (guild_id, user_id, unit_name, amount)
+						VALUES (%s, %s, %s, %s);
+					""",(data.guild_id, data.user_id, data.unit_name, amount_decimal)
 				)
 
 		except Exception as error:
@@ -145,7 +165,9 @@ class DonationManager:
 				f"With error: {error}"
 			))
 
-	async def get_user_donation(self, guild_id: int, user_id: int) -> Decimal:
+	async def get_user_donation(self, 
+							 guild_id: int, user_id: int,
+							 unit_name: str) -> Decimal:
 		try:
 			async with self.pool.connection() as connect:
 				await GuildUtils.add_guild_if_not_exists(
@@ -156,8 +178,8 @@ class DonationManager:
 					"""
 						SELECT COALESCE (SUM(amount), 0)
 						FROM donation_logs
-						WHERE guild_id = %s AND user_id = %s;
-					""", (guild_id, user_id)
+						WHERE guild_id = %s AND user_id = %s AND unit_name = %s;
+					""", (guild_id, user_id, unit_name)
 				)
 
 				result = await row.fetchone()
