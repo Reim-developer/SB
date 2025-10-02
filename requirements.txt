@@ -1,6 +1,7 @@
 discord
-aiosqlite
+aiosqlite # Legacy stuff, checkout in sql/legacy
 aiohttp
 psycopg
 psycopg-pool
 google-genai
+redis
