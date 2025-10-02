@@ -1,15 +1,18 @@
-from discord.ext import commands
-from discord import app_commands, Interaction, TextChannel
-from sql.donation_manager import DonationManager
-from core_utils.container import container_instance
+from discord.ext 		   import commands
+from discord 			   import app_commands, Interaction, TextChannel
+from sql.donation_manager  import DonationManager
+from core_utils.container  import container_instance
+from caches.donation_cache import DonationCache
 
 class DonationLogSlash(commands.Cog):
 	def __init__(self, bot: commands.Bot) -> None:
-		self.bot = bot
-		self.pool = container_instance.get_postgres_manager().pool
+		self.bot   			= bot
+		self.pool  			= container_instance.get_postgres_manager().pool
+		self.redis 		    = container_instance.get_redis_manager().new_or_get()
+		self.donation_cache = DonationCache(self.redis)
 
 		assert self.pool is not None
-		self.donation_manager = DonationManager(self.pool)
+		self.donation_manager = DonationManager(self.pool, self.donation_cache)
 
 	@app_commands.command(
 			name = "donation_set_log", 
