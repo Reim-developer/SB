@@ -1,12 +1,14 @@
-from dataclasses import dataclass
-from discord.ext import commands
-from discord import TextChannel, Thread, app_commands, Interaction, Embed
-from core_utils.container import container_instance
-from sql.donation_manager import DonationManager
-from datetime import datetime 
+from dataclasses 		   import dataclass
+from discord.ext 		   import commands
+from discord 			   import (
+	TextChannel, Thread, app_commands, Interaction, Embed
+)
+from core_utils.container  import container_instance
+from sql.donation_manager  import DonationManager
+from datetime 		       import datetime 
 from core_utils.time_utils import TimeUtils
 from caches.donation_cache import DonationCache
-
+from core_utils.type_alias import DisableAllMentions
 
 @dataclass
 class _UnitModifyContext:
@@ -16,6 +18,8 @@ class _UnitModifyContext:
 
 class DonationUnitSlash(commands.Cog):
 	_MIN_UNIT_LENGTH = 32
+	_MAX_UNIT_COUNT  = 25
+	_DAM 		     = DisableAllMentions
 
 	def __init__(self, bot: commands.Bot) -> None:
 		self.bot  = bot
@@ -25,6 +29,28 @@ class DonationUnitSlash(commands.Cog):
 
 		assert self.pool is not None
 		self.donation_manager = DonationManager(self.pool, self.donation_cache)
+
+	async def __maxium_unit_count_reject(self, interaction: Interaction) -> None:
+		await interaction.followup.send(
+				content = (
+					f"The number of units in the servers has reached "
+					f"maxium of `{self._MAX_UNIT_COUNT}`.\n"
+					"Please remove them and try again"
+				)
+			)
+		
+	async def __exists_unit_reject(self, interaction: Interaction, unit_name: str) -> None:
+		await interaction.followup.send(
+			content = (
+				f"The unit: `{unit_name}` is already exists."
+			),
+			allowed_mentions = self._DAM
+		)
+
+	async def __maxium_characters_reject(self, interaction: Interaction) -> None:
+		await interaction.response.send_message(
+				f"Could not set money unit over `{self._MIN_UNIT_LENGTH}` characters",
+			)
 
 	async def __send_log_unit_modify(self, ctx: _UnitModifyContext) -> None:
 		assert ctx.interaction.guild is not None # Interaction.guild will always not `None` here
@@ -56,19 +82,22 @@ class DonationUnitSlash(commands.Cog):
 	async def donation_unit_set(self, 
 							 interaction: Interaction, unit_name: str) -> None:
 		if not interaction.guild:
-			await interaction.response.send_message(
-				"Could not use this command in DM"
-			)
 			return 
 		
 		if len(unit_name) >= self._MIN_UNIT_LENGTH:
-			await interaction.response.send_message(
-				f"Could not set money unit over {self._MIN_UNIT_LENGTH} characters",
-				ephemeral = True
-			)
+			await self.__maxium_characters_reject(interaction)
 			return
 		
 		await interaction.response.defer()
+
+		units = await self.donation_manager.get_unit_names(guild_id = interaction.guild.id)
+		if len(units) >= self._MAX_UNIT_COUNT:
+			await self.__maxium_unit_count_reject(interaction)
+			return
+		
+		if unit_name in units:
+			await self.__exists_unit_reject(interaction, unit_name)
+			return
 
 		await self.donation_manager.add_unit_name(
 			guild_id   = interaction.guild.id,
